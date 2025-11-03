@@ -1,0 +1,24 @@
+Package: cgrdpg
+Type: Package
+Title: GRDPG with Contextual Covariates via Fisher Scoring
+Version: 0.1.0
+Authors@R: c(person(given = "Myung-Jin", family = "Lee", role = c("aut", "cre"), email = "your.email@example.com"))
+Description: Implements a practical estimator for the generalized random dot product graph (GRDPG)
+    with Gaussian contextual covariates B = Z X^T + W, using an adjacency spectral embedding (ASE)
+    initialization followed by Fisher scoring updates with smoothed log-likelihood (psi smoothing).
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Depends: R (>= 4.1)
+Imports:
+    stats,
+    Matrix
+Suggests:
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown
+Config/testthat/edition: 3
+URL: https://example.com
+BugReports: https://example.com/issues
