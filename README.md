@@ -43,12 +43,4 @@ str(fit)
 
 - `tau`: smoothing threshold (default 1e-2). Smaller = closer to raw log-likelihood but less stable.
 - `alpha`: weight on the covariate term in the Fisher update.
-- `ridge`, `ridgeZ`: tiny stabilizers for numerical solves.
-
 ---
-
-**Roadmap / TODO (nice-to-haves)**
-
-- Joint update for \(X\) via block Fisher (vectorized) instead of per-node loop.
-- Automatic choice of \(d\) and signature \((p,q)\) via scree / signed elbow.
-- Convergence diagnostics and line-search.
