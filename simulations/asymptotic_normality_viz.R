@@ -69,6 +69,9 @@ collect_estimates <- function(n, p_cov, d = 3, p_sig = 2, q_sig = 1,
                                seed = 456, verbose = TRUE) {
   set.seed(seed)
 
+  # Start timing
+  start_time <- Sys.time()
+
   # Generate one dataset to get true positions
   data_ref <- generate_grdpg_data(n, p_cov, d, p_sig, q_sig)
   X0_ref <- data_ref$X0
@@ -93,13 +96,21 @@ collect_estimates <- function(n, p_cov, d = 3, p_sig = 2, q_sig = 1,
   if (verbose) {
     cat("=== Collecting Estimates for Asymptotic Normality ===\n")
     cat(sprintf("n=%d, p_cov=%d, reps=%d\n", n, p_cov, n_reps))
-    cat(sprintf("Tracking %d vertices: %s\n\n",
+    cat(sprintf("Tracking %d vertices: %s\n",
                 n_vertices, paste(vertices_to_track, collapse = ", ")))
+    cat(sprintf("Start time: %s\n\n", format(start_time, "%Y-%m-%d %H:%M:%S")))
   }
 
+  replicate_times <- numeric(n_reps)
+
   for (rep in 1:n_reps) {
+    rep_start <- Sys.time()
+
     if (verbose && rep %% 50 == 0) {
-      cat(sprintf("Replicate %d/%d\n", rep, n_reps))
+      elapsed <- as.numeric(difftime(rep_start, start_time, units = "secs"))
+      eta <- (elapsed / rep) * (n_reps - rep)
+      cat(sprintf("Replicate %d/%d (Elapsed: %.1fs, ETA: %.1fs)\n",
+                  rep, n_reps, elapsed, eta))
     }
 
     # Generate new data with SAME X0 structure
@@ -118,7 +129,14 @@ collect_estimates <- function(n, p_cov, d = 3, p_sig = 2, q_sig = 1,
       i <- vertices_to_track[idx]
       estimates[rep, idx, ] <- X_aligned[i, ]
     }
+
+    # Record time for this replicate
+    replicate_times[rep] <- as.numeric(difftime(Sys.time(), rep_start, units = "secs"))
   }
+
+  # End timing
+  end_time <- Sys.time()
+  total_time <- as.numeric(difftime(end_time, start_time, units = "secs"))
 
   # Compute theoretical covariance for each tracked vertex
   for (idx in 1:n_vertices) {
@@ -127,12 +145,29 @@ collect_estimates <- function(n, p_cov, d = 3, p_sig = 2, q_sig = 1,
     theoretical_cov[idx, , ] <- solve(G_in)
   }
 
+  if (verbose) {
+    cat("\n=== Collection Complete ===\n")
+    cat(sprintf("Total time: %.2f seconds (%.2f minutes)\n",
+                total_time, total_time / 60))
+    cat(sprintf("Average time per replicate: %.3f seconds\n",
+                mean(replicate_times)))
+    cat(sprintf("End time: %s\n", format(end_time, "%Y-%m-%d %H:%M:%S")))
+  }
+
   list(
     estimates = estimates,
     X0_ref = X0_ref,
     vertices_tracked = vertices_to_track,
     theoretical_cov = theoretical_cov,
-    n_reps = n_reps
+    n_reps = n_reps,
+    timing = list(
+      total_time_seconds = total_time,
+      mean_replicate_time = mean(replicate_times),
+      median_replicate_time = median(replicate_times),
+      all_replicate_times = replicate_times,
+      start_time = start_time,
+      end_time = end_time
+    )
   )
 }
 

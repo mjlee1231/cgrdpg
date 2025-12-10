@@ -188,6 +188,10 @@ test_single_replicate <- function(n = 50, p_cov = 5, d = 3,
 # ------------------------------------------------------------------------------
 set.seed(123)
 
+cat("\n=== Starting Quick Test ===\n")
+start_time <- Sys.time()
+cat(sprintf("Start time: %s\n\n", format(start_time, "%Y-%m-%d %H:%M:%S")))
+
 result <- test_single_replicate(
   n = 50,
   p_cov = 5,
@@ -198,13 +202,19 @@ result <- test_single_replicate(
   alpha = 0.05
 )
 
+end_time <- Sys.time()
+elapsed_time <- as.numeric(difftime(end_time, start_time, units = "secs"))
+
 cat("\n=== Quick Test Complete ===\n")
 if (result$success) {
   cat(sprintf("Coverage rate: %d/%d (%.1f%%)\n",
               sum(result$coverage),
               length(result$coverage),
               100 * mean(result$coverage)))
+  cat(sprintf("\nTime elapsed: %.2f seconds\n", elapsed_time))
+  cat(sprintf("End time: %s\n", format(end_time, "%Y-%m-%d %H:%M:%S")))
   cat("\nSetup appears viable for full simulation!\n")
 } else {
   cat(sprintf("Test failed: %s\n", result$reason))
+  cat(sprintf("Time elapsed: %.2f seconds\n", elapsed_time))
 }

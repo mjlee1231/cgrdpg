@@ -145,11 +145,15 @@ run_coverage_simulation <- function(n, p_cov, d = 3, p_sig = 2, q_sig = 1,
                                      alpha = 0.05, seed = 123, verbose = TRUE) {
   set.seed(seed)
 
+  # Start timing
+  start_time <- Sys.time()
+
   if (verbose) {
     cat("=== Coverage Probability Simulation ===\n")
     cat(sprintf("Parameters: n=%d, p_cov=%d, d=%d, reps=%d, alpha=%.3f\n",
                 n, p_cov, d, n_reps, alpha))
-    cat(sprintf("Expected coverage: %.1f%%\n\n", 100 * (1 - alpha)))
+    cat(sprintf("Expected coverage: %.1f%%\n", 100 * (1 - alpha)))
+    cat(sprintf("Start time: %s\n\n", format(start_time, "%Y-%m-%d %H:%M:%S")))
   }
 
   # If no vertices specified, test a sample
@@ -166,11 +170,17 @@ run_coverage_simulation <- function(n, p_cov, d = 3, p_sig = 2, q_sig = 1,
   error_sq_sum <- matrix(0, n_vertices, d)
   se_sum <- matrix(0, n_vertices, d)
   n_converged <- 0
+  replicate_times <- numeric(n_reps)
 
   # Run replicates
   for (rep in 1:n_reps) {
+    rep_start <- Sys.time()
+
     if (verbose && rep %% 10 == 0) {
-      cat(sprintf("Replicate %d/%d\n", rep, n_reps))
+      elapsed <- as.numeric(difftime(rep_start, start_time, units = "secs"))
+      eta <- (elapsed / rep) * (n_reps - rep)
+      cat(sprintf("Replicate %d/%d (Elapsed: %.1fs, ETA: %.1fs)\n",
+                  rep, n_reps, elapsed, eta))
     }
 
     result <- test_coverage_replicate(
@@ -187,7 +197,14 @@ run_coverage_simulation <- function(n, p_cov, d = 3, p_sig = 2, q_sig = 1,
     error_sum <- error_sum + result$errors
     error_sq_sum <- error_sq_sum + result$errors^2
     se_sum <- se_sum + result$std_errors
+
+    # Record time for this replicate
+    replicate_times[rep] <- as.numeric(difftime(Sys.time(), rep_start, units = "secs"))
   }
+
+  # End timing
+  end_time <- Sys.time()
+  total_time <- as.numeric(difftime(end_time, start_time, units = "secs"))
 
   # Compute empirical coverage rates
   coverage_rates <- coverage_count / n_reps
@@ -216,6 +233,17 @@ run_coverage_simulation <- function(n, p_cov, d = 3, p_sig = 2, q_sig = 1,
       cat(sprintf("  Coordinate %d: %.4f (avg SE: %.4f)\n",
                   k, mean(rmse[, k]), mean(mean_se[, k])))
     }
+
+    cat("\n=== Timing ===\n")
+    cat(sprintf("Total time: %.2f seconds (%.2f minutes)\n",
+                total_time, total_time / 60))
+    cat(sprintf("Average time per replicate: %.3f seconds\n",
+                mean(replicate_times)))
+    cat(sprintf("Median time per replicate: %.3f seconds\n",
+                median(replicate_times)))
+    cat(sprintf("Min/Max time per replicate: %.3f / %.3f seconds\n",
+                min(replicate_times), max(replicate_times)))
+    cat(sprintf("End time: %s\n", format(end_time, "%Y-%m-%d %H:%M:%S")))
   }
 
   list(
@@ -227,7 +255,17 @@ run_coverage_simulation <- function(n, p_cov, d = 3, p_sig = 2, q_sig = 1,
     n_reps = n_reps,
     vertices_tested = vertices_to_test,
     params = list(n = n, p_cov = p_cov, d = d, p_sig = p_sig,
-                  q_sig = q_sig, alpha = alpha)
+                  q_sig = q_sig, alpha = alpha),
+    timing = list(
+      total_time_seconds = total_time,
+      mean_replicate_time = mean(replicate_times),
+      median_replicate_time = median(replicate_times),
+      min_replicate_time = min(replicate_times),
+      max_replicate_time = max(replicate_times),
+      all_replicate_times = replicate_times,
+      start_time = start_time,
+      end_time = end_time
+    )
   )
 }
 
@@ -249,6 +287,12 @@ results <- run_coverage_simulation(
   seed = 123,
   verbose = TRUE
 )
+
+# Create output directory if it doesn't exist
+if (!dir.exists("simulations")) {
+  dir.create("simulations", recursive = TRUE)
+  cat("\nCreated simulations directory\n")
+}
 
 # Save results
 saveRDS(results, "simulations/coverage_results.rds")
