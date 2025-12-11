@@ -23,7 +23,6 @@ generate_grdpg_data <- function(n, p_cov, d = 3, p_sig = 2, q_sig = 1) {
   S <- diag(c(rep(1, p_sig), rep(-1, q_sig)))
   Y0 <- X0 %*% S
   P <- X0 %*% t(Y0)
-  P <- pmin(pmax(P, 1e-3), 1 - 1e-3)
 
   A <- matrix(rbinom(n * n, 1, as.vector(P)), n, n)
   A[lower.tri(A)] <- t(A)[lower.tri(A)]
