@@ -12,7 +12,7 @@ The algorithm uses:
 3. A **Fisher scoring** sweep to update \(X\) with \(Y = X I_{p,q}\) and current \(Z\) fixed.
 4. **Closed-form refit** of \(Z\) each iteration: \( \hat Z = B X (X^\top X + \lambda I)^{-1} \).
 
-> This is a research prototype that matches the math notes you provided.
+
 
 ## Install (devtools)
 
