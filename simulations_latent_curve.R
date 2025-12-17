@@ -72,8 +72,7 @@ run_simulation <- function(n, p_cov, n_reps = 100, d = 3, p_sig = 2, q_sig = 1,
 
     # Generate probability matrix
     P <- X0 %*% S %*% t(X0)
-    # Clip probabilities to valid range [1e-3, 1-1e-3]
-    P <- pmin(pmax(P, 1e-3), 1 - 1e-3)
+    
 
     # Sample adjacency matrix (symmetric, no self-loops)
     A <- matrix(rbinom(n * n, 1, as.vector(P)), n, n)
