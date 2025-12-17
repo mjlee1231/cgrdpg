@@ -15,12 +15,21 @@
 #' \code{converged}, \code{iters}, and \code{history}.
 #' @examples
 #' \dontrun{
+#' # Generate latent positions on a 3D curve
+#' generate_latent_curve <- function(n) {
+#'   t_vals <- (1:n) / n
+#'   X <- matrix(0, n, 3)
+#'   X[, 1] <- 0.15 * sin(2 * pi * t_vals) + 0.6
+#'   X[, 2] <- 0.15 * cos(2 * pi * t_vals) + 0.6
+#'   X[, 3] <- 0.15 * cos(4 * pi * t_vals)
+#'   return(X)
+#' }
+#'
 #' set.seed(1)
 #' n <- 60; d <- 3; p_sig <- 2; q_sig <- 1; p_cov <- 4
-#' X0 <- matrix(rnorm(n*d, sd = 0.7), n, d)
+#' X0 <- generate_latent_curve(n)
 #' S <- diag(c(rep(1, p_sig), rep(-1, q_sig)))
 #' P <- X0 %*% S %*% t(X0)
-#' P <- pmin(pmax(P, 1e-3), 1-1e-3)
 #' A <- matrix(rbinom(n*n, 1, as.vector(P)), n, n); A[lower.tri(A)] <- t(A)[lower.tri(A)]; diag(A) <- 0
 #' Z0 <- matrix(rnorm(p_cov*d), p_cov, d)
 #' B <- Z0 %*% t(X0) + matrix(rnorm(p_cov*n), p_cov, n)
