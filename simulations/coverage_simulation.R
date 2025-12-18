@@ -274,18 +274,18 @@ run_coverage_simulation <- function(n, p_cov, d = 3, p_sig = 2, q_sig = 1,
 cat("Starting coverage simulation...\n\n")
 
 # Main simulation
-results <- run_coverage_simulation(
-  n = 60,
-  p_cov = 5,
-  d = 3,
-  p_sig = 2,
-  q_sig = 1,
-  n_reps = 200,
-  vertices_to_test = c(5, 10, 15, 20, 25, 30, 35, 40, 45, 50),
-  alpha = 0.05,
-  seed = 123,
-  verbose = TRUE
-)
+# results <- run_coverage_simulation(
+#   n = 60,
+#   p_cov = 5,
+#   d = 3,
+#   p_sig = 2,
+#   q_sig = 1,
+#   n_reps = 200,
+#   vertices_to_test = c(5, 10, 15, 20, 25, 30, 35, 40, 45, 50),
+#   alpha = 0.05,
+#   seed = 123,
+#   verbose = TRUE
+# )
 
 # Create output directory if it doesn't exist
 if (!dir.exists("simulations")) {
@@ -294,12 +294,12 @@ if (!dir.exists("simulations")) {
 }
 
 # Save results
-saveRDS(results, "simulations/coverage_results.rds")
-cat("\nResults saved to simulations/coverage_results.rds\n")
+# saveRDS(results, "simulations/coverage_results.rds")
+# cat("\nResults saved to simulations/coverage_results.rds\n")
 
 # Optional: Test different sample sizes
 cat("\n\n=== Testing different sample sizes ===\n")
-sample_sizes <- c(40, 60, 80, 100)
+sample_sizes <- c(100, 500)
 size_results <- list()
 
 for (n in sample_sizes) {
@@ -309,7 +309,7 @@ for (n in sample_sizes) {
     p_cov = 5,
     d = 3,
     n_reps = 100,
-    vertices_to_test = round(seq(1, n, length.out = 10)),
+    vertices_to_test = c(5, 25, 50, 75),
     alpha = 0.05,
     verbose = TRUE
   )
