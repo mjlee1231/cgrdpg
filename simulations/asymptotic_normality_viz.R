@@ -64,7 +64,7 @@ procrustes_rotation <- function(X_hat, X0) {
 # Collect Estimates Across Replicates
 # ------------------------------------------------------------------------------
 collect_estimates <- function(n, p_cov, d = 3, p_sig = 2, q_sig = 1,
-                               n_reps = 500, vertices_to_track = NULL,
+                               n_reps = 100, vertices_to_track = NULL,
                                seed = 456, verbose = TRUE) {
   set.seed(seed)
 
