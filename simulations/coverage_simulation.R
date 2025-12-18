@@ -66,7 +66,7 @@ procrustes_rotation <- function(X_hat, X0) {
 # ------------------------------------------------------------------------------
 test_coverage_replicate <- function(n, p_cov, d = 3, p_sig = 2, q_sig = 1,
                                      vertices_to_test = NULL, alpha = 0.05,
-                                     maxit = 10, verbose = FALSE) {
+                                     maxit = 5, verbose = FALSE) {
   # Generate data
   data <- generate_grdpg_data(n, p_cov, d, p_sig, q_sig)
   X0 <- data$X0
