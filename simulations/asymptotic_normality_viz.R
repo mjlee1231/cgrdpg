@@ -327,7 +327,7 @@ collected <- collect_estimates(
   n = 60,
   p_cov = 5,
   d = 3,
-  n_reps = 500,
+  n_reps = 100,
   vertices_to_track = c(10, 20, 30, 40, 50),
   seed = 456,
   verbose = TRUE
