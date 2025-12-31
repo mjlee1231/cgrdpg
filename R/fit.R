@@ -20,7 +20,6 @@
 #' X0 <- matrix(rnorm(n*d, sd = 0.7), n, d)
 #' S <- diag(c(rep(1, p_sig), rep(-1, q_sig)))
 #' P <- X0 %*% S %*% t(X0)
-#' P <- pmin(pmax(P, 1e-3), 1-1e-3)
 #' A <- matrix(rbinom(n*n, 1, as.vector(P)), n, n); A[lower.tri(A)] <- t(A)[lower.tri(A)]; diag(A) <- 0
 #' Z0 <- matrix(rnorm(p_cov*d), p_cov, d)
 #' B <- Z0 %*% t(X0) + matrix(rnorm(p_cov*n), p_cov, n)
