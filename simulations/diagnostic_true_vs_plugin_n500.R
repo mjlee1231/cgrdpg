@@ -104,11 +104,14 @@ cat(sprintf("Model fitting: %.2f seconds (%.2f minutes)\n\n", fit_time, fit_time
 cat("Procrustes alignment...\n")
 X_est <- fit$X
 Z_est <- fit$Z
-M <- t(X_est) %*% X0
-svd_res <- svd(M)
-R <- svd_res$u %*% t(svd_res$v)
+
+Uhat <- svd(X_est)$u
+U0 <- svd(X0)$u
+W_svd <- svd(t(Uhat) %*% U0)
+R <- W_svd$u %*% t(W_svd$v)
 X_aligned <- X_est %*% R
 Z_updated <- B %*% X_aligned %*% solve(t(X_aligned) %*% X_aligned)
+
 
 SSE <- sum((X_aligned - X0)^2)
 cat(sprintf("SSE: %.4f\n\n", SSE))
