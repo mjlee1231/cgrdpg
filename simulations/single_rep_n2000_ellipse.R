@@ -1,4 +1,4 @@
-# Single replication script for n=800 ellipse coverage
+# Single replication script for n=2000 ellipse coverage
 # Uses SLURM_ARRAY_TASK_ID as the replication number and seed
 library(cgrdpg)
 
@@ -36,13 +36,13 @@ compute_G_in_plugin <- function(i, X_est, Y_est, Z_est, tau) {
 }
 
 cat("============================================================================\n")
-cat(sprintf("  Single Replication: n=800, Rep ID=%d\n", rep_id))
+cat(sprintf("  Single Replication: n=2000, Rep ID=%d\n", rep_id))
 cat("============================================================================\n\n")
 
 # Set parameters
 set.seed(1000 + rep_id)  # Different seed for each replication
-n <- 800
-p_cov <- 400  # p_cov = n/2
+n <- 2000
+p_cov <- 1000  # p_cov = n/2
 d <- 3
 maxit <- 3  # Reduced from 5 for faster convergence
 tol <- 0.01
@@ -105,7 +105,7 @@ Y_aligned <- X_aligned %*% S
 in_ellipse <- logical(n)
 
 for (i in 1:n) {
-  if (i %% 200 == 0) cat(sprintf("  Node %d/%d\n", i, n))
+  if (i %% 500 == 0) cat(sprintf("  Node %d/%d\n", i, n))
 
   # Compute PLUG-IN G_in using estimated parameters
   G_in_plugin <- compute_G_in_plugin(i, X_aligned, Y_aligned, Z_updated, tau = tau)
@@ -146,13 +146,13 @@ cat(sprintf("  - Model fitting:  %.2f seconds\n", fit_time))
 cat(sprintf("  - Coverage check: %.2f seconds\n\n", cov_time))
 
 # Create output directory if it doesn't exist
-output_dir <- "results_n800"
+output_dir <- "results_n2000"
 if (!dir.exists(output_dir)) {
   dir.create(output_dir, recursive = TRUE)
 }
 
 # Save results to unique file in output directory
-output_file <- file.path(output_dir, sprintf("results_n800_rep%03d.rds", rep_id))
+output_file <- file.path(output_dir, sprintf("results_n2000_rep%03d.rds", rep_id))
 results <- list(
   rep_id = rep_id,
   coverage = coverage,
