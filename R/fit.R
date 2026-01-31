@@ -7,10 +7,9 @@
 #' @param p number of positive signature directions. If \code{NULL}, estimated.
 #' @param q number of negative signature directions. If \code{NULL}, taken as \code{d-p}.
 #' @details Dimension consistency (p + q == d) is validated internally by ase_grdpg().
-#' @param tau smoothing threshold in (0, 1/2). Default 0.05.
-#' @param maxit maximum number of Fisher-scoring sweeps. Default 5.
-#' @param tol stopping tolerance on the maximum row change of X. Default 1e-2.
-#' @param ridge small ridge inside linear solves. Default 0.
+#' @param tau smoothing threshold in (0, 1/2). Default 0.001.
+#' @param maxit maximum number of Fisher-scoring sweeps. Default 30.
+#' @param tol stopping tolerance on the maximum row change of X. Default 0.005.
 #' @return a list with \code{X}, \code{Z}, \code{Y}, \code{p}, \code{q}, \code{tau},
 #' \code{converged}, \code{iters}, and \code{history}.
 #' @examples
@@ -29,7 +28,7 @@
 #' @export
 fit_grdpg_cov <- function(
     A, B, d, p = NULL, q = NULL,
-    tau = 0.05, maxit = 5, tol = 1e-2, ridge = 0
+    tau = 0.001, maxit = 30, tol = 0.005
 ) {
   # Define n first
   n <- nrow(A)
@@ -54,8 +53,20 @@ fit_grdpg_cov <- function(
   hist$objective <- c(hist$objective,
                       surrogate_objective(A, X, Z, B, sign_diag, tau = tau))
 
+  # Store X0 for line search
+  X0 <- ase$X
+
   for (t in 1:maxit) {
-    Xnew <- fisher_sweep_X(A, X, Z, B, sign_diag, tau = tau, ridge = ridge)
+    # Adaptive ls_beta: Use 0.8 for the first 8 iterations, then 0.4
+    current_beta <- if (t <= 8) 0.8 else 0.4
+
+    Xnew <- fisher_sweep_X(
+      A, X, Z, B, sign_diag,
+      tau = tau,
+      ls_beta = current_beta,
+      ls_c = 1e-4,
+      X0 = X0
+    )
 
     # refit Z given new X
     XtX <- crossprod(Xnew)
