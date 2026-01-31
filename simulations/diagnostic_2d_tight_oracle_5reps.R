@@ -199,7 +199,7 @@ cat(sprintf("%-5d %-10.4f %-10.1f %-15.1f %-15.1f\n",
             100*results$coverage_true, 100*results$coverage_plugin))
 
 # Save results with replication number in filename
-output_file <- sprintf("simulations/diagnostic_2d_tight_oracle_rep%d.rds", rep_to_run)
+output_file <- sprintf("diagnostic_2d_tight_oracle_rep%d.rds", rep_to_run)
 saveRDS(results, output_file)
 cat(sprintf("\nResults saved to: %s\n", output_file))
 cat("============================================================================\n")
