@@ -53,9 +53,6 @@ fit_grdpg_cov <- function(
   hist$objective <- c(hist$objective,
                       surrogate_objective(A, X, Z, B, sign_diag, tau = tau))
 
-  # Store X0 for line search
-  X0 <- ase$X
-
   for (t in 1:maxit) {
     # Adaptive ls_beta: Use 0.8 for the first 8 iterations, then 0.4
     current_beta <- if (t <= 8) 0.8 else 0.4
@@ -64,8 +61,7 @@ fit_grdpg_cov <- function(
       A, X, Z, B, sign_diag,
       tau = tau,
       ls_beta = current_beta,
-      ls_c = 1e-4,
-      X0 = X0
+      ls_c = 1e-4
     )
 
     # refit Z given new X
