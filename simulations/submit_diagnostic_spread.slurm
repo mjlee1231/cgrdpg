@@ -8,8 +8,8 @@
 #SBATCH --mem=32G
 #SBATCH --time=24:00:00
 #SBATCH --array=1-5
-#SBATCH --output=diag_spread_rep%a_%j.out
-#SBATCH --error=diag_spread_rep%a_%j.err
+#SBATCH --output=logs/diag_spread_rep%a_%j.out
+#SBATCH --error=logs/diag_spread_rep%a_%j.err
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=mle6@iu.edu
 
