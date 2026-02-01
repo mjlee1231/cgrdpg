@@ -33,12 +33,19 @@ fit_grdpg_cov <- function(
   # Define n first
   n <- nrow(A)
   p_cov <- nrow(B)
-  
+
   # Input checks
   stopifnot(is.matrix(A), nrow(A) == ncol(A), is.matrix(B))
   stopifnot(ncol(B) == n)
 
-  ase <- ase_grdpg(A, d = d, p = p, q = q)
+  # Diagonal augmentation for better ASE initialization
+  # This reduces shrinkage bias from zero diagonals
+  A_aug <- A
+  diag(A_aug) <- rowSums(A) / (n - 1)
+
+  # Compute initial latent positions using augmented matrix
+  # Provides better warm start closer to MLE
+  ase <- ase_grdpg(A_aug, d = d, p = p, q = q)
   X <- ase$X; p <- ase$p; q <- ase$q; sign_diag <- ase$sign_diag
 
   XtX <- crossprod(X)
@@ -53,6 +60,8 @@ fit_grdpg_cov <- function(
   hist$objective <- c(hist$objective,
                       surrogate_objective(A, X, Z, B, sign_diag, tau = tau))
 
+  # Fisher scoring using ORIGINAL matrix A (not augmented)
+  # Ensures unbiased optimization and variance estimates
   for (t in 1:maxit) {
     # Adaptive ls_beta: Use 0.8 for the first 8 iterations, then 0.4
     current_beta <- if (t <= 8) 0.8 else 0.4
