@@ -69,7 +69,8 @@ d <- 2
 maxit <- 30
 tol <- 0.01
 tau <- 0.005
-ls_beta <- 0.4
+# Note: ls_beta = 0.4 was requested but is not a parameter in fit_grdpg_cov
+# The function uses its default line search behavior
 
 # Set seed for this replication (base seed 598)
 set.seed(598 + rep_id)
@@ -91,8 +92,8 @@ min_p <- min(P)
 max_p <- max(P)
 
 cat(sprintf("Edge Probability Range: [%.4f, %.4f]\n", min_p, max_p))
-cat(sprintf("Parameters: n=%d, p_cov=%d, d=%d, tau=%.3f, ls_beta=%.2f\n\n",
-            n, p_cov, d, tau, ls_beta))
+cat(sprintf("Parameters: n=%d, p_cov=%d, d=%d, tau=%.3f\n\n",
+            n, p_cov, d, tau))
 
 rep_start <- Sys.time()
 
@@ -108,7 +109,7 @@ B <- Z0 %*% t(X0) + matrix(rnorm(p_cov * n, sd = 1.0), p_cov, n)
 cat("Fitting GRDPG model...\n")
 fit_start <- Sys.time()
 fit <- fit_grdpg_cov(A, B, d = d, p = 2, q = 0,
-                     maxit = maxit, tol = tol, tau = tau, ls_beta = ls_beta)
+                     maxit = maxit, tol = tol, tau = tau)
 fit_time <- as.numeric(difftime(Sys.time(), fit_start, units = "secs"))
 
 # Manual Oracle Procrustes alignment
@@ -191,7 +192,6 @@ results <- list(
   p_cov = p_cov,
   d = d,
   tau = tau,
-  ls_beta = ls_beta,
   in_ellipse_true = in_ellipse_true,      # Length 500: TRUE/FALSE/NA for each vertex
   in_ellipse_plugin = in_ellipse_plugin,  # Length 500: TRUE/FALSE/NA for each vertex
   SSE = SSE,
