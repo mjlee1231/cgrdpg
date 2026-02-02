@@ -68,7 +68,7 @@ compute_G_in_plugin <- function(i, X_est, Y_est, Z_est, tau) {
 cat("============================================================================\n")
 cat("  DIAGNOSTIC: 2D TIGHT - Manual Oracle Procrustes Alignment\n")
 cat(sprintf("  Running REPLICATION %d (Array Job)\n", rep_id))
-cat("  ALL 500 nodes checked with %d parallel cores\n", n_cores))
+cat(sprintf("  ALL 500 nodes checked with %d parallel cores\n", n_cores))
 cat("  Package defaults: tau=0.001, ls_beta=0.35, tol=0.005, maxit=30\n")
 cat("  Script overrides: tau=0.005, tol=0.01, ADAPTIVE ls_beta=0.8->0.4\n")
 cat("  With diagonal augmentation for ASE initialization\n")
