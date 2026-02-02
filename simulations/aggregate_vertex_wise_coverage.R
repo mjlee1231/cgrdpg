@@ -7,8 +7,8 @@ cat("  AGGREGATING VERTEX-WISE COVERAGE RESULTS\n")
 cat("  2D SPREAD - 100 Replications\n")
 cat("============================================================================\n\n")
 
-# Find all result files in the vertex_wise_results_n500 directory
-result_dir <- "vertex_wise_results_n500"
+# Find all result files in the vertex_wise_results_n500_optimized directory
+result_dir <- "vertex_wise_results_n500_optimized"
 if (!dir.exists(result_dir)) {
   stop(sprintf("Directory '%s' not found! Make sure simulations have completed.", result_dir))
 }

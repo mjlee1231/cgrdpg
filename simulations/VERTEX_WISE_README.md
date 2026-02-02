@@ -6,8 +6,9 @@ This directory contains scripts for computing vertex-wise coverage rates across 
 
 - **Goal**: Compute coverage rate for each of 500 vertices across 100 independent replications
 - **Method**: Elliptical confidence intervals using Oracle Procrustes alignment
-- **Configuration**: 2D SPREAD (r=0.22, c=0.48)
-- **Parameters**: n=500, p_cov=250, d=2, tau=0.005, ls_beta=0.4, seed=598
+- **Configuration**: 2D SPREAD OPTIMIZED (r=0.28, c=0.42)
+  - Edge probability range: [0.195, 0.764]
+- **Parameters**: n=500, p_cov=250, d=2, tau=0.005, seed=598
 
 ## File Structure
 
@@ -16,14 +17,14 @@ simulations/
 ├── vertex_wise_coverage_spread_100reps.R     # Main simulation script (run per replication)
 ├── submit_vertex_wise_spread_100reps.slurm   # SLURM array job submission script
 ├── aggregate_vertex_wise_coverage.R          # Aggregates results from all reps
-├── vertex_wise_results_n500/                 # Output directory (created automatically)
+├── vertex_wise_results_n500_optimized/       # Output directory (created automatically)
 │   ├── vertex_wise_spread_rep001.rds         # Results from rep 1
 │   ├── vertex_wise_spread_rep002.rds         # Results from rep 2
 │   ├── ...
 │   ├── vertex_wise_spread_rep100.rds         # Results from rep 100
 │   ├── vertex_wise_coverage_aggregated.rds   # Final aggregated results
 │   └── vertex_wise_coverage_results.csv      # CSV for easy viewing
-└── vertex_wise_logs_n500/                    # Log directory (must create manually)
+└── vertex_wise_logs_n500_optimized/          # Log directory (must create manually)
     ├── vertex_wise_spread_rep001_*.out       # Standard output
     ├── vertex_wise_spread_rep001_*.err       # Error output
     └── ...
@@ -35,7 +36,7 @@ simulations/
 
 ```bash
 cd ~/cgrdpg/simulations
-mkdir -p vertex_wise_logs_n500
+mkdir -p vertex_wise_logs_n500_optimized
 ```
 
 ### Step 2: Submit Array Job
@@ -56,7 +57,7 @@ squeue -u $USER
 watch -n 30 'squeue -u $USER | wc -l'
 
 # Check specific job output
-tail -f vertex_wise_logs_n500/vertex_wise_spread_rep001_*.out
+tail -f vertex_wise_logs_n500_optimized/vertex_wise_spread_rep001_*.out
 ```
 
 ### Step 4: Aggregate Results
@@ -68,15 +69,15 @@ Rscript aggregate_vertex_wise_coverage.R
 ```
 
 This creates:
-- `vertex_wise_results_n500/vertex_wise_coverage_aggregated.rds` (full results)
-- `vertex_wise_results_n500/vertex_wise_coverage_results.csv` (summary table)
+- `vertex_wise_results_n500_optimized/vertex_wise_coverage_aggregated.rds` (full results)
+- `vertex_wise_results_n500_optimized/vertex_wise_coverage_results.csv` (summary table)
 
 ### Step 5: Transfer Results to Local
 
 ```bash
 # On local machine
 cd ~/Documents/GitHub/cgrdpg/simulations
-scp -r mle6@bigred.uits.iu.edu:~/cgrdpg/simulations/vertex_wise_results_n500 .
+scp -r mle6@bigred.uits.iu.edu:~/cgrdpg/simulations/vertex_wise_results_n500_optimized .
 ```
 
 ## Expected Runtime

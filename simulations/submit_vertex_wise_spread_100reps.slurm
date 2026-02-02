@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --account=r00357
-#SBATCH --job-name=vtx_spread_%a
+#SBATCH --job-name=vtx_opt_%a
 #SBATCH --partition=general
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -8,8 +8,8 @@
 #SBATCH --mem=32G
 #SBATCH --time=48:00:00
 #SBATCH --array=1-100
-#SBATCH --output=vertex_wise_logs_n500/vertex_wise_spread_rep%03a_%j.out
-#SBATCH --error=vertex_wise_logs_n500/vertex_wise_spread_rep%03a_%j.err
+#SBATCH --output=vertex_wise_logs_n500_optimized/vertex_wise_spread_rep%03a_%j.out
+#SBATCH --error=vertex_wise_logs_n500_optimized/vertex_wise_spread_rep%03a_%j.err
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=mle6@iu.edu
 
@@ -22,7 +22,7 @@ echo "Job started at: $(date)"
 echo "Running on node: $(hostname)"
 echo "Job ID: $SLURM_JOB_ID"
 echo "Array Task ID: $SLURM_ARRAY_TASK_ID"
-echo "Scenario: Vertex-wise Coverage - 2D SPREAD"
+echo "Scenario: Vertex-wise Coverage - 2D SPREAD (OPTIMIZED r=0.28, c=0.42)"
 echo "Replication: $SLURM_ARRAY_TASK_ID/100"
 echo "Resources: 16 CPUs, 32GB RAM"
 echo "========================================"

@@ -3,6 +3,9 @@
 # Computes coverage for ALL 500 vertices - saves per-vertex indicators
 # To be aggregated across 100 replications for vertex-wise coverage rates
 # ARRAY JOB VERSION: Each job runs 1 replication
+#
+# Configuration: Optimized SPREAD (r=0.28, c=0.42)
+# Edge probability range: [0.195, 0.764]
 
 library(cgrdpg)
 
@@ -75,13 +78,14 @@ tau <- 0.005
 # Set seed for this replication (base seed 598)
 set.seed(598 + rep_id)
 
-# Generate 2D latent positions (SPREAD configuration - ORIGINAL as specified)
-cat("Generating 2D SPREAD latent positions...\n")
-i_vals <- 0:(n-1)
+# Generate 2D latent positions (SPREAD configuration - OPTIMIZED)
+# Target edge probability range: [0.195, 0.764]
+cat("Generating 2D SPREAD latent positions (optimized)...\n")
+i_vals <- 1:n
 theta <- pi * i_vals / (n - 1)
 X0 <- matrix(0, n, 2)
-X0[, 1] <- 0.22 * sin(theta) + 0.48
-X0[, 2] <- 0.22 * cos(theta) + 0.48
+X0[, 1] <- 0.28 * sin(theta) + 0.42
+X0[, 2] <- 0.28 * cos(theta) + 0.42
 
 S <- diag(c(1, 1))
 Y0 <- X0 %*% S
@@ -180,7 +184,8 @@ cat(sprintf("Coverage (this rep): TRUE=%.1f%% (NAs=%d), PLUGIN=%.1f%% (NAs=%d)\n
 rep_time <- as.numeric(difftime(Sys.time(), rep_start, units = "mins"))
 
 # Create output directory if it doesn't exist
-output_dir <- "vertex_wise_results_n500"
+# Using "_optimized" suffix to distinguish from original latent positions
+output_dir <- "vertex_wise_results_n500_optimized"
 if (!dir.exists(output_dir)) {
   dir.create(output_dir, recursive = TRUE)
 }
