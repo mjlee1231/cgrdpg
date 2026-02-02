@@ -2,9 +2,7 @@
 # 5 replications, ALL nodes checked
 # NOTE: Package does NOT include Oracle Procrustes - alignment is done manually in this script
 # ARRAY JOB VERSION: Accepts replication number from command line
-# PARALLEL VERSION: Uses mclapply for parallel coverage computation
 library(cgrdpg)
-library(parallel)
 
 # Get replication number from command line
 args <- commandArgs(trailingOnly = TRUE)
@@ -14,15 +12,6 @@ if (length(args) == 0) {
 rep_id <- as.integer(args[1])
 if (is.na(rep_id) || rep_id < 1 || rep_id > 5) {
   stop("Rep number must be between 1 and 5")
-}
-
-# Get number of cores from SLURM environment
-n_cores <- as.numeric(Sys.getenv("SLURM_CPUS_PER_TASK"))
-if (is.na(n_cores) || n_cores < 1) {
-  n_cores <- 1  # fallback for local runs
-  cat("Warning: SLURM_CPUS_PER_TASK not set, using 1 core\n")
-} else {
-  cat(sprintf("Using %d cores for parallel processing\n", n_cores))
 }
 
 compute_G_in_true <- function(i, X0, Y0, Z0, tau) {
@@ -68,7 +57,7 @@ compute_G_in_plugin <- function(i, X_est, Y_est, Z_est, tau) {
 cat("============================================================================\n")
 cat("  DIAGNOSTIC: 2D SPREAD - Manual Oracle Procrustes Alignment\n")
 cat(sprintf("  Running REPLICATION %d (Array Job)\n", rep_id))
-cat(sprintf("  ALL 500 nodes checked with %d parallel cores\n", n_cores))
+cat("  ALL 500 nodes checked (sequential)\n")
 cat("  Package defaults: tau=0.001, ls_beta=0.35, tol=0.005, maxit=30\n")
 cat("  Script overrides: tau=0.005, tol=0.01, ADAPTIVE ls_beta=0.8->0.4\n")
 cat("  With diagonal augmentation for ASE initialization\n")
@@ -149,13 +138,17 @@ SSE <- sum((X_aligned - X0)^2)
 
 cat(sprintf("SSE: %.4f, Fit Time: %.1f seconds\n", SSE, fit_time))
 
-# Compute coverage with BOTH methods on ALL nodes (parallelized)
-cat(sprintf("Computing coverage on ALL nodes using %d cores...\n", n_cores))
+# Compute coverage with BOTH methods on ALL nodes
+cat("Computing coverage on ALL nodes...\n")
 chi2_crit <- qchisq(0.95, df = d)
 
-# Function to compute coverage for a single node
-compute_node_coverage <- function(i) {
-  result <- list(true = NA, plugin = NA)
+in_ellipse_true <- logical(n)
+in_ellipse_plugin <- logical(n)
+
+coverage_start <- Sys.time()
+
+for (i in 1:n) {
+  if (i %% 100 == 0) cat(sprintf("  Node %d/%d\n", i, n))
 
   # TRUE G_in
   G_in_true <- compute_G_in_true(i, X0, Y0, Z0, tau = tau)
@@ -163,7 +156,9 @@ compute_node_coverage <- function(i) {
   if (min(eig_vals) >= 1e-10) {
     diff_vec <- X0[i, ] - X_aligned[i, ]
     mahal_dist <- (n + p_cov) * as.numeric(t(diff_vec) %*% G_in_true %*% diff_vec)
-    result$true <- (mahal_dist <= chi2_crit)
+    in_ellipse_true[i] <- (mahal_dist <= chi2_crit)
+  } else {
+    in_ellipse_true[i] <- NA
   }
 
   # PLUG-IN G_in
@@ -172,22 +167,14 @@ compute_node_coverage <- function(i) {
   if (min(eig_vals) >= 1e-10) {
     diff_vec <- X0[i, ] - X_aligned[i, ]
     mahal_dist <- (n + p_cov) * as.numeric(t(diff_vec) %*% G_in_plugin %*% diff_vec)
-    result$plugin <- (mahal_dist <= chi2_crit)
+    in_ellipse_plugin[i] <- (mahal_dist <= chi2_crit)
+  } else {
+    in_ellipse_plugin[i] <- NA
   }
-
-  return(result)
 }
 
-# Parallel computation across all nodes
-coverage_start <- Sys.time()
-coverage_results <- mclapply(1:n, compute_node_coverage, mc.cores = n_cores)
 coverage_time <- as.numeric(difftime(Sys.time(), coverage_start, units = "secs"))
-
 cat(sprintf("Coverage computation completed in %.1f seconds\n", coverage_time))
-
-# Extract results
-in_ellipse_true <- sapply(coverage_results, function(x) x$true)
-in_ellipse_plugin <- sapply(coverage_results, function(x) x$plugin)
 
 coverage_true <- mean(in_ellipse_true, na.rm = TRUE)
 coverage_plugin <- mean(in_ellipse_plugin, na.rm = TRUE)
