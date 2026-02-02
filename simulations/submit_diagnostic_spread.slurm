@@ -4,8 +4,9 @@
 #SBATCH --partition=general
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=16
-#SBATCH --mem=32G
+#SBATCH --cpus-per-task=128
+#SBATCH --mem=248G
+#SBATCH --exclusive
 #SBATCH --time=24:00:00
 #SBATCH --array=1-5
 #SBATCH --output=logs/diag_spread_rep%a_%j.out
@@ -24,7 +25,8 @@ echo "Job ID: $SLURM_JOB_ID"
 echo "Array Task ID: $SLURM_ARRAY_TASK_ID"
 echo "Scenario: 2D SPREAD Oracle Alignment"
 echo "Replication: $SLURM_ARRAY_TASK_ID/5"
-echo "Resources: 16 CPUs, 32GB RAM"
+echo "Resources: 128 CPUs, 248GB RAM, EXCLUSIVE node"
+echo "CPUs available for R: $SLURM_CPUS_PER_TASK"
 echo "========================================"
 
 # Run the simulation with the replication number

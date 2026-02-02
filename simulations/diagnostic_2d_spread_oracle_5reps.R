@@ -2,16 +2,27 @@
 # 5 replications, ALL nodes checked
 # NOTE: Package does NOT include Oracle Procrustes - alignment is done manually in this script
 # ARRAY JOB VERSION: Accepts replication number from command line
+# PARALLEL VERSION: Uses mclapply for parallel coverage computation
 library(cgrdpg)
+library(parallel)
 
 # Get replication number from command line
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) == 0) {
   stop("Usage: Rscript diagnostic_2d_spread_oracle_5reps.R <rep_number>")
 }
-rep_to_run <- as.integer(args[1])
-if (is.na(rep_to_run) || rep_to_run < 1 || rep_to_run > 5) {
+rep_id <- as.integer(args[1])
+if (is.na(rep_id) || rep_id < 1 || rep_id > 5) {
   stop("Rep number must be between 1 and 5")
+}
+
+# Get number of cores from SLURM environment
+n_cores <- as.numeric(Sys.getenv("SLURM_CPUS_PER_TASK"))
+if (is.na(n_cores) || n_cores < 1) {
+  n_cores <- 1  # fallback for local runs
+  cat("Warning: SLURM_CPUS_PER_TASK not set, using 1 core\n")
+} else {
+  cat(sprintf("Using %d cores for parallel processing\n", n_cores))
 }
 
 compute_G_in_true <- function(i, X0, Y0, Z0, tau) {
@@ -56,10 +67,11 @@ compute_G_in_plugin <- function(i, X_est, Y_est, Z_est, tau) {
 
 cat("============================================================================\n")
 cat("  DIAGNOSTIC: 2D SPREAD - Manual Oracle Procrustes Alignment\n")
-cat(sprintf("  Running REPLICATION %d (Array Job)\n", rep_to_run))
-cat("  ALL 500 nodes checked\n")
+cat(sprintf("  Running REPLICATION %d (Array Job)\n", rep_id))
+cat("  ALL 500 nodes checked with %d parallel cores\n", n_cores))
 cat("  Package defaults: tau=0.001, ls_beta=0.35, tol=0.005, maxit=30\n")
 cat("  Script overrides: tau=0.005, tol=0.01, ADAPTIVE ls_beta=0.8->0.4\n")
+cat("  With diagonal augmentation for ASE initialization\n")
 cat("============================================================================\n\n")
 
 # Fixed parameters
@@ -70,7 +82,7 @@ maxit <- 30
 tol <- 0.01
 
 # Set seed based on replication number for reproducibility
-set.seed(598 + rep_to_run)
+set.seed(123 + rep_id)
 
 # Generate 2D latent positions (SPREAD configuration)
 cat("Generating 2D SPREAD latent positions...\n")
@@ -95,7 +107,7 @@ cat(sprintf("Adaptive line search: ls_beta = 0.8 (iter 1-8) -> 0.4 (iter 9+)\n\n
 
 # Storage for single replication result
 results <- list(
-  rep = rep_to_run,
+  rep = rep_id,
   SSE = NA,
   fit_time = NA,
   coverage_true = NA,
@@ -103,7 +115,7 @@ results <- list(
 )
 
 rep_start <- Sys.time()
-cat(sprintf("============== REPLICATION %d ==============\n", rep_to_run))
+cat(sprintf("============== REPLICATION %d ==============\n", rep_id))
 
 # Generate data
 cat("Generating adjacency matrix A...\n")
@@ -137,15 +149,13 @@ SSE <- sum((X_aligned - X0)^2)
 
 cat(sprintf("SSE: %.4f, Fit Time: %.1f seconds\n", SSE, fit_time))
 
-# Compute coverage with BOTH methods on ALL nodes
-cat("Computing coverage on ALL nodes...\n")
+# Compute coverage with BOTH methods on ALL nodes (parallelized)
+cat(sprintf("Computing coverage on ALL nodes using %d cores...\n", n_cores))
 chi2_crit <- qchisq(0.95, df = d)
 
-in_ellipse_true <- logical(n)
-in_ellipse_plugin <- logical(n)
-
-for (i in 1:n) {
-  if (i %% 100 == 0) cat(sprintf("  Node %d/%d\n", i, n))
+# Function to compute coverage for a single node
+compute_node_coverage <- function(i) {
+  result <- list(true = NA, plugin = NA)
 
   # TRUE G_in
   G_in_true <- compute_G_in_true(i, X0, Y0, Z0, tau = tau)
@@ -153,9 +163,7 @@ for (i in 1:n) {
   if (min(eig_vals) >= 1e-10) {
     diff_vec <- X0[i, ] - X_aligned[i, ]
     mahal_dist <- (n + p_cov) * as.numeric(t(diff_vec) %*% G_in_true %*% diff_vec)
-    in_ellipse_true[i] <- (mahal_dist <= chi2_crit)
-  } else {
-    in_ellipse_true[i] <- NA
+    result$true <- (mahal_dist <= chi2_crit)
   }
 
   # PLUG-IN G_in
@@ -164,11 +172,22 @@ for (i in 1:n) {
   if (min(eig_vals) >= 1e-10) {
     diff_vec <- X0[i, ] - X_aligned[i, ]
     mahal_dist <- (n + p_cov) * as.numeric(t(diff_vec) %*% G_in_plugin %*% diff_vec)
-    in_ellipse_plugin[i] <- (mahal_dist <= chi2_crit)
-  } else {
-    in_ellipse_plugin[i] <- NA
+    result$plugin <- (mahal_dist <= chi2_crit)
   }
+
+  return(result)
 }
+
+# Parallel computation across all nodes
+coverage_start <- Sys.time()
+coverage_results <- mclapply(1:n, compute_node_coverage, mc.cores = n_cores)
+coverage_time <- as.numeric(difftime(Sys.time(), coverage_start, units = "secs"))
+
+cat(sprintf("Coverage computation completed in %.1f seconds\n", coverage_time))
+
+# Extract results
+in_ellipse_true <- sapply(coverage_results, function(x) x$true)
+in_ellipse_plugin <- sapply(coverage_results, function(x) x$plugin)
 
 coverage_true <- mean(in_ellipse_true, na.rm = TRUE)
 coverage_plugin <- mean(in_ellipse_plugin, na.rm = TRUE)
@@ -185,8 +204,9 @@ cat(sprintf("Coverage: TRUE=%.1f%%, PLUGIN=%.1f%%\n\n",
 rep_time <- as.numeric(difftime(Sys.time(), rep_start, units = "mins"))
 
 cat("============================================================================\n")
-cat(sprintf("  REPLICATION %d COMPLETED\n", rep_to_run))
-cat(sprintf("  Total time: %.2f minutes\n", rep_time))
+cat(sprintf("  REPLICATION %d COMPLETED\n", rep_id))
+cat(sprintf("  Total time: %.2f minutes (Fit: %.1fs, Coverage: %.1fs)\n",
+            rep_time, fit_time, coverage_time))
 cat("============================================================================\n\n")
 
 # Print results
@@ -198,7 +218,7 @@ cat(sprintf("%-5d %-10.4f %-10.1f %-15.1f %-15.1f\n",
             100*results$coverage_true, 100*results$coverage_plugin))
 
 # Save results with replication number in filename
-output_file <- sprintf("diagnostic_2d_spread_oracle_rep%d.rds", rep_to_run)
+output_file <- sprintf("diagnostic_2d_spread_oracle_rep%d.rds", rep_id)
 saveRDS(results, output_file)
 cat(sprintf("\nResults saved to: %s\n", output_file))
 cat("============================================================================\n")
