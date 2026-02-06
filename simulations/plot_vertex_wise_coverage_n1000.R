@@ -9,8 +9,18 @@ cat("  PLOTTING VERTEX-WISE COVERAGE (n=1000)\n")
 cat("============================================================================\n\n")
 
 # Option 1: Read from RDS file (more complete data)
-rds_file <- "vertex_wise_results_n1000/vertex_wise_coverage_aggregated_n1000.rds"
-csv_file <- "vertex_wise_results_n1000/vertex_wise_coverage_results_n1000.csv"
+# Check multiple possible locations
+rds_file <- if (file.exists("vertex_wise_results_n1000/vertex_wise_coverage_aggregated_n1000.rds")) {
+  "vertex_wise_results_n1000/vertex_wise_coverage_aggregated_n1000.rds"
+} else {
+  "vertex_wise_coverage_aggregated_n1000.rds"
+}
+
+csv_file <- if (file.exists("vertex_wise_results_n1000/vertex_wise_coverage_results_n1000.csv")) {
+  "vertex_wise_results_n1000/vertex_wise_coverage_results_n1000.csv"
+} else {
+  "vertex_wise_coverage_results_n1000.csv"
+}
 
 # Check which file exists
 if (file.exists(rds_file)) {
