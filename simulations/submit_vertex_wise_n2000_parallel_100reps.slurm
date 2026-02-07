@@ -6,7 +6,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=128G
-#SBATCH --time=96:00:00
+#SBATCH --time=24:00:00
 #SBATCH --array=1-100
 #SBATCH --output=vertex_wise_logs_n2000_parallel/vertex_wise_n2000_rep%03a_%j.out
 #SBATCH --error=vertex_wise_logs_n2000_parallel/vertex_wise_n2000_rep%03a_%j.err
