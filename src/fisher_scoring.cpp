@@ -1,6 +1,9 @@
 #include <Rcpp.h>
 using namespace Rcpp;
 
+// Forward declaration of dpsi_cpp from psi_functions.cpp
+NumericVector dpsi_cpp(NumericVector s, double tau);
+
 //' Compute Fisher information matrix G_in for a single vertex (C++ version)
 //'
 //' @param i vertex index (0-based in C++)
