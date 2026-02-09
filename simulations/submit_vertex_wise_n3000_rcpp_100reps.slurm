@@ -5,7 +5,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=64
-#SBATCH --mem=248G
+#SBATCH --mem=200G
 #SBATCH --time=48:00:00
 #SBATCH --array=1-100
 #SBATCH --output=vertex_wise_logs_n3000_rcpp/vertex_wise_n3000_rep%03a_%j.out
