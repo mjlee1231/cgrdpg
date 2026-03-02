@@ -15,7 +15,7 @@ n <- 500
 p_cov <- 250
 d <- 1
 n_reps <- 100
-maxit <- 30
+maxit <- 3
 tol <- 0.01
 base_seed <- 598
 
