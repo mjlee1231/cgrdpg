@@ -85,6 +85,11 @@ extract_coverage <- function(result_obj, method = "fisher") {
         fisher_plugin <- mean(result_obj$vertex_coverage$coverage_plugin, na.rm = TRUE)
       }
     }
+    # Try structure 5: Direct vectors vertex_coverage_true/vertex_coverage_plugin
+    else if (!is.null(result_obj$vertex_coverage_true) && is.numeric(result_obj$vertex_coverage_true)) {
+      fisher_true <- mean(result_obj$vertex_coverage_true, na.rm = TRUE)
+      fisher_plugin <- mean(result_obj$vertex_coverage_plugin, na.rm = TRUE)
+    }
 
     if (is.na(fisher_true) || is.na(fisher_plugin)) {
       cat("Warning: Could not extract coverage from Fisher result\n")
