@@ -224,10 +224,10 @@ cat("\n")
 
 # --- SSE Comparison (if available) ---
 cat("============================================================================\n")
-cat("  SSE COMPARISON (ASE vs OSE, no covariates)\n")
+cat("  SSE COMPARISON: ASE vs OSE vs FISHER-SCORING\n")
 cat("============================================================================\n\n")
 
-extract_sse <- function(result_obj) {
+extract_sse_ase_ose <- function(result_obj) {
   list(
     ase_mean = mean(result_obj$sse$ase),
     ose_mean = mean(result_obj$sse$ose),
@@ -235,20 +235,165 @@ extract_sse <- function(result_obj) {
   )
 }
 
-sse_500 <- extract_sse(ase_ose_500)
-sse_1000 <- extract_sse(ase_ose_1000)
-sse_2000 <- extract_sse(ase_ose_2000)
-sse_3000 <- extract_sse(ase_ose_3000)
+extract_sse_fisher <- function(result_obj) {
+  # Try different possible field names
+  if (!is.null(result_obj$rep_SSEs) && is.numeric(result_obj$rep_SSEs)) {
+    return(mean(result_obj$rep_SSEs, na.rm = TRUE))
+  } else if (!is.null(result_obj$all_SSE) && is.numeric(result_obj$all_SSE)) {
+    return(mean(result_obj$all_SSE, na.rm = TRUE))
+  } else if (!is.null(result_obj$SSE) && is.list(result_obj$SSE)) {
+    return(result_obj$SSE$mean)
+  } else {
+    return(NA)
+  }
+}
 
-cat("Mean SSE across replications:\n")
-cat(sprintf("n=500:  ASE=%.4f, OSE=%.4f, Improvement=%.2f%%\n",
-            sse_500$ase_mean, sse_500$ose_mean, sse_500$improvement))
-cat(sprintf("n=1000: ASE=%.4f, OSE=%.4f, Improvement=%.2f%%\n",
-            sse_1000$ase_mean, sse_1000$ose_mean, sse_1000$improvement))
-cat(sprintf("n=2000: ASE=%.4f, OSE=%.4f, Improvement=%.2f%%\n",
-            sse_2000$ase_mean, sse_2000$ose_mean, sse_2000$improvement))
-cat(sprintf("n=3000: ASE=%.4f, OSE=%.4f, Improvement=%.2f%%\n\n",
-            sse_3000$ase_mean, sse_3000$ose_mean, sse_3000$improvement))
+sse_500 <- extract_sse_ase_ose(ase_ose_500)
+sse_1000 <- extract_sse_ase_ose(ase_ose_1000)
+sse_2000 <- extract_sse_ase_ose(ase_ose_2000)
+sse_3000 <- extract_sse_ase_ose(ase_ose_3000)
+
+sse_fisher_500 <- extract_sse_fisher(fisher_500)
+sse_fisher_1000 <- extract_sse_fisher(fisher_1000)
+sse_fisher_2000 <- extract_sse_fisher(fisher_2000)
+sse_fisher_3000 <- extract_sse_fisher(fisher_3000)
+
+cat("Mean SSE across replications:\n\n")
+cat(sprintf("n=500:\n"))
+cat(sprintf("  ASE:    %.4f\n", sse_500$ase_mean))
+cat(sprintf("  OSE:    %.4f (%.2f%% vs ASE)\n", sse_500$ose_mean, sse_500$improvement))
+if (!is.na(sse_fisher_500)) {
+  cat(sprintf("  FISHER: %.4f\n\n", sse_fisher_500))
+} else {
+  cat(sprintf("  FISHER: N/A\n\n"))
+}
+
+cat(sprintf("n=1000:\n"))
+cat(sprintf("  ASE:    %.4f\n", sse_1000$ase_mean))
+cat(sprintf("  OSE:    %.4f (%.2f%% vs ASE)\n", sse_1000$ose_mean, sse_1000$improvement))
+if (!is.na(sse_fisher_1000)) {
+  cat(sprintf("  FISHER: %.4f\n\n", sse_fisher_1000))
+} else {
+  cat(sprintf("  FISHER: N/A\n\n"))
+}
+
+cat(sprintf("n=2000:\n"))
+cat(sprintf("  ASE:    %.4f\n", sse_2000$ase_mean))
+cat(sprintf("  OSE:    %.4f (%.2f%% vs ASE)\n", sse_2000$ose_mean, sse_2000$improvement))
+if (!is.na(sse_fisher_2000)) {
+  cat(sprintf("  FISHER: %.4f\n\n", sse_fisher_2000))
+} else {
+  cat(sprintf("  FISHER: N/A\n\n"))
+}
+
+cat(sprintf("n=3000:\n"))
+cat(sprintf("  ASE:    %.4f\n", sse_3000$ase_mean))
+cat(sprintf("  OSE:    %.4f (%.2f%% vs ASE)\n", sse_3000$ose_mean, sse_3000$improvement))
+if (!is.na(sse_fisher_3000)) {
+  cat(sprintf("  FISHER: %.4f\n\n", sse_fisher_3000))
+} else {
+  cat(sprintf("  FISHER: N/A\n\n"))
+}
+
+cat("Comparison of methods:\n")
+cat("  - ASE:    No covariates, spectral embedding\n")
+cat("  - OSE:    No covariates, 1-step from ASE\n")
+cat("  - FISHER: With covariates, iterative optimization\n\n")
+
+# --- Timing Comparison ---
+cat("============================================================================\n")
+cat("  TIMING COMPARISON: ASE vs OSE vs FISHER-SCORING\n")
+cat("============================================================================\n\n")
+
+extract_timing_ase_ose <- function(result_obj) {
+  list(
+    ase_mean = mean(result_obj$timing$ase),
+    ose_mean = mean(result_obj$timing$ose),
+    coverage_mean = mean(result_obj$timing$coverage)
+  )
+}
+
+extract_timing_fisher <- function(result_obj) {
+  # Try different possible field names for Fisher-scoring timing
+  if (!is.null(result_obj$rep_fit_times) && is.numeric(result_obj$rep_fit_times)) {
+    return(mean(result_obj$rep_fit_times, na.rm = TRUE))
+  } else if (!is.null(result_obj$all_fit_times) && is.numeric(result_obj$all_fit_times)) {
+    return(mean(result_obj$all_fit_times, na.rm = TRUE))
+  } else if (!is.null(result_obj$timing) && is.list(result_obj$timing)) {
+    if (!is.null(result_obj$timing$fit_time_mean)) {
+      return(result_obj$timing$fit_time_mean)
+    } else if (!is.null(result_obj$timing$fit)) {
+      return(mean(result_obj$timing$fit, na.rm = TRUE))
+    }
+  } else {
+    return(NA)
+  }
+}
+
+timing_500 <- extract_timing_ase_ose(ase_ose_500)
+timing_1000 <- extract_timing_ase_ose(ase_ose_1000)
+timing_2000 <- extract_timing_ase_ose(ase_ose_2000)
+timing_3000 <- extract_timing_ase_ose(ase_ose_3000)
+
+timing_fisher_500 <- extract_timing_fisher(fisher_500)
+timing_fisher_1000 <- extract_timing_fisher(fisher_1000)
+timing_fisher_2000 <- extract_timing_fisher(fisher_2000)
+timing_fisher_3000 <- extract_timing_fisher(fisher_3000)
+
+cat("Mean computation time per replication (seconds):\n\n")
+
+cat(sprintf("n=500:\n"))
+cat(sprintf("  ASE:         %.2f sec\n", timing_500$ase_mean))
+cat(sprintf("  OSE:         %.2f sec\n", timing_500$ose_mean))
+cat(sprintf("  Coverage:    %.2f sec\n", timing_500$coverage_mean))
+cat(sprintf("  ASE+OSE+Cov: %.2f sec total\n", timing_500$ase_mean + timing_500$ose_mean + timing_500$coverage_mean))
+if (!is.na(timing_fisher_500)) {
+  speedup <- timing_fisher_500 / (timing_500$ase_mean + timing_500$ose_mean)
+  cat(sprintf("  FISHER:      %.2f sec (%.1fx vs ASE+OSE)\n\n", timing_fisher_500, speedup))
+} else {
+  cat(sprintf("  FISHER:      N/A\n\n"))
+}
+
+cat(sprintf("n=1000:\n"))
+cat(sprintf("  ASE:         %.2f sec\n", timing_1000$ase_mean))
+cat(sprintf("  OSE:         %.2f sec\n", timing_1000$ose_mean))
+cat(sprintf("  Coverage:    %.2f sec\n", timing_1000$coverage_mean))
+cat(sprintf("  ASE+OSE+Cov: %.2f sec total\n", timing_1000$ase_mean + timing_1000$ose_mean + timing_1000$coverage_mean))
+if (!is.na(timing_fisher_1000)) {
+  speedup <- timing_fisher_1000 / (timing_1000$ase_mean + timing_1000$ose_mean)
+  cat(sprintf("  FISHER:      %.2f sec (%.1fx vs ASE+OSE)\n\n", timing_fisher_1000, speedup))
+} else {
+  cat(sprintf("  FISHER:      N/A\n\n"))
+}
+
+cat(sprintf("n=2000:\n"))
+cat(sprintf("  ASE:         %.2f sec\n", timing_2000$ase_mean))
+cat(sprintf("  OSE:         %.2f sec\n", timing_2000$ose_mean))
+cat(sprintf("  Coverage:    %.2f sec\n", timing_2000$coverage_mean))
+cat(sprintf("  ASE+OSE+Cov: %.2f sec total\n", timing_2000$ase_mean + timing_2000$ose_mean + timing_2000$coverage_mean))
+if (!is.na(timing_fisher_2000)) {
+  speedup <- timing_fisher_2000 / (timing_2000$ase_mean + timing_2000$ose_mean)
+  cat(sprintf("  FISHER:      %.2f sec (%.1fx vs ASE+OSE)\n\n", timing_fisher_2000, speedup))
+} else {
+  cat(sprintf("  FISHER:      N/A\n\n"))
+}
+
+cat(sprintf("n=3000:\n"))
+cat(sprintf("  ASE:         %.2f sec\n", timing_3000$ase_mean))
+cat(sprintf("  OSE:         %.2f sec\n", timing_3000$ose_mean))
+cat(sprintf("  Coverage:    %.2f sec\n", timing_3000$coverage_mean))
+cat(sprintf("  ASE+OSE+Cov: %.2f sec total\n", timing_3000$ase_mean + timing_3000$ose_mean + timing_3000$coverage_mean))
+if (!is.na(timing_fisher_3000)) {
+  speedup <- timing_fisher_3000 / (timing_3000$ase_mean + timing_3000$ose_mean)
+  cat(sprintf("  FISHER:      %.2f sec (%.1fx vs ASE+OSE)\n\n", timing_fisher_3000, speedup))
+} else {
+  cat(sprintf("  FISHER:      N/A\n\n"))
+}
+
+cat("Notes:\n")
+cat("  - ASE+OSE times are for NO covariates case\n")
+cat("  - FISHER times are for WITH covariates case (iterative optimization)\n")
+cat("  - Coverage computation time is similar for all methods\n\n")
 
 # --- Save comparison results ---
 comparison_results <- list(
@@ -257,7 +402,15 @@ comparison_results <- list(
     n = c(500, 1000, 2000, 3000),
     ase_sse = c(sse_500$ase_mean, sse_1000$ase_mean, sse_2000$ase_mean, sse_3000$ase_mean),
     ose_sse = c(sse_500$ose_mean, sse_1000$ose_mean, sse_2000$ose_mean, sse_3000$ose_mean),
+    fisher_sse = c(sse_fisher_500, sse_fisher_1000, sse_fisher_2000, sse_fisher_3000),
     ose_improvement_pct = c(sse_500$improvement, sse_1000$improvement, sse_2000$improvement, sse_3000$improvement)
+  ),
+  timing_comparison = data.frame(
+    n = c(500, 1000, 2000, 3000),
+    ase_time_sec = c(timing_500$ase_mean, timing_1000$ase_mean, timing_2000$ase_mean, timing_3000$ase_mean),
+    ose_time_sec = c(timing_500$ose_mean, timing_1000$ose_mean, timing_2000$ose_mean, timing_3000$ose_mean),
+    coverage_time_sec = c(timing_500$coverage_mean, timing_1000$coverage_mean, timing_2000$coverage_mean, timing_3000$coverage_mean),
+    fisher_time_sec = c(timing_fisher_500, timing_fisher_1000, timing_fisher_2000, timing_fisher_3000)
   ),
   raw_data = list(
     ase_ose_500 = ase_ose_500,
