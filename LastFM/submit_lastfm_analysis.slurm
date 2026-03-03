@@ -6,7 +6,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
-#SBATCH --time=2:00:00
+#SBATCH --time=4:00:00
 #SBATCH --output=lastfm_grdpg_%j.out
 #SBATCH --error=lastfm_grdpg_%j.err
 #SBATCH --mail-type=END,FAIL
