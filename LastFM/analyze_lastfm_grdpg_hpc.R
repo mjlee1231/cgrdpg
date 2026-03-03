@@ -164,7 +164,7 @@ cat(sprintf("  Using d=%d (selected from eigenvalue gap analysis)\n\n", d))
 cat("--- METHOD 1: FISHER-SCORING (with covariates) ---\n")
 fisher_start <- Sys.time()
 fit_fisher <- fit_grdpg_cov(Aselect, B, d = d, p = d, q = 0,
-                             maxit = 10, tol = 0.01, tau = tau)
+                             maxit = 30, tol = 0.01, tau = tau)
 fisher_time <- as.numeric(difftime(Sys.time(), fisher_start, units = "secs"))
 cat(sprintf("  Fitting time: %.2f seconds (%.2f minutes)\n", fisher_time, fisher_time/60))
 cat(sprintf("  Converged: %s\n", ifelse(fit_fisher$converged, "YES", "NO")))
@@ -308,7 +308,11 @@ evaluate_clustering <- function(X, labels, method_name) {
 
   # Between-cluster sum of squares / Total sum of squares
   bss_tss <- km$betweenss / km$totss
-  cat(sprintf("  BSS/TSS ratio: %.4f\n\n", bss_tss))
+  cat(sprintf("  BSS/TSS ratio: %.4f\n", bss_tss))
+
+  # Within-cluster sum of squares (average)
+  avg_withinss <- mean(km$withinss)
+  cat(sprintf("  Avg within-cluster SS: %.2f\n\n", avg_withinss))
 
   return(list(
     silhouette = avg_sil,
