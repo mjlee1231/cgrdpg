@@ -4,8 +4,8 @@
 #SBATCH --partition=general
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=64G
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=128G
 #SBATCH --time=24:00:00
 #SBATCH --output=lastfm_grdpg_%j.out
 #SBATCH --error=lastfm_grdpg_%j.err
@@ -22,13 +22,20 @@
 # Load R module
 module load r/4.3.1
 
+# Set environment variables to enable multi-threading
+export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
+export MKL_NUM_THREADS=$SLURM_CPUS_PER_TASK
+export OPENBLAS_NUM_THREADS=$SLURM_CPUS_PER_TASK
+export BLIS_NUM_THREADS=$SLURM_CPUS_PER_TASK
+
 # Print job information
 echo "========================================"
 echo "Job started at: $(date)"
 echo "Running on node: $(hostname)"
 echo "Job ID: $SLURM_JOB_ID"
 echo "CPUs: $SLURM_CPUS_PER_TASK"
-echo "Memory: 32GB"
+echo "Memory: 128GB"
+echo "OMP_NUM_THREADS: $OMP_NUM_THREADS"
 echo "Analysis: LastFM GRDPG (Fisher vs ASE vs OSE)"
 echo "========================================"
 
