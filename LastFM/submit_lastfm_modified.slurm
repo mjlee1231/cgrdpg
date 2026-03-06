@@ -4,9 +4,9 @@
 #SBATCH --partition=general
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=64
-#SBATCH --mem=200G
-#SBATCH --time=12:00:00
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=128G
+#SBATCH --time=24:00:00
 #SBATCH --output=lastfm_modified_%j.out
 #SBATCH --error=lastfm_modified_%j.err
 #SBATCH --mail-type=END,FAIL
@@ -34,8 +34,8 @@ echo "Job started at: $(date)"
 echo "Running on node: $(hostname)"
 echo "Job ID: $SLURM_JOB_ID"
 echo "CPUs: $SLURM_CPUS_PER_TASK"
-echo "Memory: 200GB"
-echo "Time limit: 12 hours"
+echo "Memory: 128GB"
+echo "Time limit: 24 hours"
 echo "OMP_NUM_THREADS: $OMP_NUM_THREADS"
 echo "Analysis: LastFM with MODIFIED Fisher-scoring (maxit=10)"
 echo "Modification: Clipped Fisher info for better conditioning"
