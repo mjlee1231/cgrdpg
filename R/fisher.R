@@ -48,12 +48,17 @@ fisher_sweep_X <- function(
     bi <- B[, i]                        # b_i
     resid <- bi - Z %*% xi
     s_cov <- as.vector(t(Z) %*% resid)
-    S <- s_net + s_cov  # score funtion
+    S <- s_net + s_cov  # score function
 
     # ----- information and Newton/Fisher direction -----
     # Fisher information for node i: sum over all edges incident to i
     # For graphs without self-loops, sum over j≠i only (w[i] already set to 0)
-    G_net <- Ytcur %*% (Ycur * w)             # Y^T diag(w) Y, with w[i]=0
+    # MODIFICATION: Truncate s to [tau, 1-tau] in Fisher info denominator only
+    s_clipped <- pmax(pmin(s, 1 - tau), tau)
+    w_fisher <- dpsi(s_clipped, tau = tau)
+    if (is.finite(w_cap)) w_fisher <- pmin(w_fisher, w_cap)
+    w_fisher[i] <- 0
+    G_net <- Ytcur %*% (Ycur * w_fisher)      # Y^T diag(w_fisher) Y, with w[i]=0
     G_cov <- ZtZ                              # G_cov <- ZtZ
     G <- G_net + G_cov        # Total Fisher information 
 
