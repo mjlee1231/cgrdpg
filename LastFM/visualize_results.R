@@ -2,8 +2,6 @@
 # Visualization of LastFM Modified Fisher-scoring Results
 
 library(ggplot2)
-library(gridExtra)
-library(reshape2)
 
 cat("Loading results...\n")
 results <- readRDS("lastfm_modified_complete_results_hpc.rds")
@@ -187,14 +185,19 @@ p3c <- ggplot(fisher_data, aes(x = Dim1, y = Dim2, color = Country)) +
   ) +
   theme(plot.title = element_text(face = "bold"))
 
-# Combine all three
-p3_combined <- grid.arrange(p3a, p3b, p3c, ncol = 3)
+# Save individual plots
+ggsave("plots/3a_latent_positions_ase.pdf", p3a, width = 6, height = 6)
+ggsave("plots/3a_latent_positions_ase.png", p3a, width = 6, height = 6, dpi = 300)
 
-ggsave("plots/3_latent_positions_comparison.pdf", p3_combined,
-       width = 18, height = 6)
-ggsave("plots/3_latent_positions_comparison.png", p3_combined,
-       width = 18, height = 6, dpi = 300)
-cat("  ✓ Saved plots/3_latent_positions_comparison.pdf\n")
+ggsave("plots/3b_latent_positions_ose.pdf", p3b, width = 6, height = 6)
+ggsave("plots/3b_latent_positions_ose.png", p3b, width = 6, height = 6, dpi = 300)
+
+ggsave("plots/3c_latent_positions_fisher.pdf", p3c, width = 6, height = 6)
+ggsave("plots/3c_latent_positions_fisher.png", p3c, width = 6, height = 6, dpi = 300)
+
+cat("  ✓ Saved plots/3a_latent_positions_ase.pdf\n")
+cat("  ✓ Saved plots/3b_latent_positions_ose.pdf\n")
+cat("  ✓ Saved plots/3c_latent_positions_fisher.pdf\n")
 
 # ============================================================================
 # 5. TIMING COMPARISON
@@ -315,7 +318,9 @@ cat("Generated files in plots/ directory:\n")
 cat("  1. 1_performance_comparison.pdf/.png\n")
 cat("  2. 2a_fisher_loss.pdf/.png\n")
 cat("  3. 2b_fisher_convergence.pdf/.png\n")
-cat("  4. 3_latent_positions_comparison.pdf/.png\n")
-cat("  5. 4_timing_comparison.pdf/.png\n")
-cat("  6. summary_report.txt\n")
+cat("  4. 3a_latent_positions_ase.pdf/.png\n")
+cat("  5. 3b_latent_positions_ose.pdf/.png\n")
+cat("  6. 3c_latent_positions_fisher.pdf/.png\n")
+cat("  7. 4_timing_comparison.pdf/.png\n")
+cat("  8. summary_report.txt\n")
 cat("\n")
