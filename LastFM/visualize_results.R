@@ -1,6 +1,9 @@
 #!/usr/bin/env Rscript
 # Visualization of LastFM Modified Fisher-scoring Results
 
+# Set options for non-interactive plotting (HPC compatibility)
+options(bitmapType='cairo')
+
 library(ggplot2)
 
 cat("Loading results...\n")
@@ -50,8 +53,8 @@ p1 <- ggplot(perf_data, aes(x = Method, y = Value, fill = Method)) +
   ) +
   geom_hline(yintercept = 0, linetype = "dashed", alpha = 0.5)
 
-ggsave("plots/1_performance_comparison.pdf", p1, width = 12, height = 5)
-ggsave("plots/1_performance_comparison.png", p1, width = 12, height = 5, dpi = 300)
+ggsave(device="cairo_pdf", "plots/1_performance_comparison.pdf", p1, width = 12, height = 5)
+ggsave(device="png", type="cairo", "plots/1_performance_comparison.png", p1, width = 12, height = 5, dpi = 300)
 cat("  ✓ Saved plots/1_performance_comparison.pdf\n")
 
 # ============================================================================
@@ -79,8 +82,8 @@ if (length(results$fisher_info$objective) > 0) {
     ) +
     theme(plot.title = element_text(face = "bold"))
 
-  ggsave("plots/2a_fisher_loss.pdf", p2a, width = 8, height = 6)
-  ggsave("plots/2a_fisher_loss.png", p2a, width = 8, height = 6, dpi = 300)
+  ggsave(device="cairo_pdf", "plots/2a_fisher_loss.pdf", p2a, width = 8, height = 6)
+  ggsave(device="png", type="cairo", "plots/2a_fisher_loss.png", p2a, width = 8, height = 6, dpi = 300)
   cat("  ✓ Saved plots/2a_fisher_loss.pdf\n")
 }
 
@@ -109,8 +112,8 @@ if (length(results$fisher_info$max_row_change) > 0) {
     ) +
     theme(plot.title = element_text(face = "bold"))
 
-  ggsave("plots/2b_fisher_convergence.pdf", p2b, width = 8, height = 6)
-  ggsave("plots/2b_fisher_convergence.png", p2b, width = 8, height = 6, dpi = 300)
+  ggsave(device="cairo_pdf", "plots/2b_fisher_convergence.pdf", p2b, width = 8, height = 6)
+  ggsave(device="png", type="cairo", "plots/2b_fisher_convergence.png", p2b, width = 8, height = 6, dpi = 300)
   cat("  ✓ Saved plots/2b_fisher_convergence.pdf\n")
 }
 
@@ -186,14 +189,14 @@ p3c <- ggplot(fisher_data, aes(x = Dim1, y = Dim2, color = Country)) +
   theme(plot.title = element_text(face = "bold"))
 
 # Save individual plots
-ggsave("plots/3a_latent_positions_ase.pdf", p3a, width = 6, height = 6)
-ggsave("plots/3a_latent_positions_ase.png", p3a, width = 6, height = 6, dpi = 300)
+ggsave(device="cairo_pdf", "plots/3a_latent_positions_ase.pdf", p3a, width = 6, height = 6)
+ggsave(device="png", type="cairo", "plots/3a_latent_positions_ase.png", p3a, width = 6, height = 6, dpi = 300)
 
-ggsave("plots/3b_latent_positions_ose.pdf", p3b, width = 6, height = 6)
-ggsave("plots/3b_latent_positions_ose.png", p3b, width = 6, height = 6, dpi = 300)
+ggsave(device="cairo_pdf", "plots/3b_latent_positions_ose.pdf", p3b, width = 6, height = 6)
+ggsave(device="png", type="cairo", "plots/3b_latent_positions_ose.png", p3b, width = 6, height = 6, dpi = 300)
 
-ggsave("plots/3c_latent_positions_fisher.pdf", p3c, width = 6, height = 6)
-ggsave("plots/3c_latent_positions_fisher.png", p3c, width = 6, height = 6, dpi = 300)
+ggsave(device="cairo_pdf", "plots/3c_latent_positions_fisher.pdf", p3c, width = 6, height = 6)
+ggsave(device="png", type="cairo", "plots/3c_latent_positions_fisher.png", p3c, width = 6, height = 6, dpi = 300)
 
 cat("  ✓ Saved plots/3a_latent_positions_ase.pdf\n")
 cat("  ✓ Saved plots/3b_latent_positions_ose.pdf\n")
@@ -239,8 +242,8 @@ p4 <- ggplot(timing_data, aes(x = Method, y = Time_seconds, fill = Method)) +
   geom_text(aes(label = sprintf("%.2fs", Time_seconds)),
             vjust = -0.5, size = 4)
 
-ggsave("plots/4_timing_comparison.pdf", p4, width = 8, height = 6)
-ggsave("plots/4_timing_comparison.png", p4, width = 8, height = 6, dpi = 300)
+ggsave(device="cairo_pdf", "plots/4_timing_comparison.pdf", p4, width = 8, height = 6)
+ggsave(device="png", type="cairo", "plots/4_timing_comparison.png", p4, width = 8, height = 6, dpi = 300)
 cat("  ✓ Saved plots/4_timing_comparison.pdf\n")
 
 # ============================================================================
