@@ -17,7 +17,7 @@
 # Signature matrix: S = diag(1,1,-1)
 # Each job runs one replication
 
-module load r/4.2.1
+module load r/4.3.1
 
 # Create directory structure on HPC
 mkdir -p 3d_simulation_n500/logs
