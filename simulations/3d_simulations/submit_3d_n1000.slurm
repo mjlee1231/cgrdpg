@@ -5,7 +5,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
-#SBATCH --mem=256G
+#SBATCH --mem=128G
 #SBATCH --time=48:00:00
 #SBATCH --array=1-100
 #SBATCH --output=3d_simulation_n1000/logs/rep%03a_%j.out
