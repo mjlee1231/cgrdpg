@@ -11,19 +11,18 @@
 #' @param B (p_cov x n) covariate matrix with columns corresponding to nodes.
 #' @param sign_diag (d x d) diagonal signature matrix with +1 (p) and -1 (q).
 #' @param tau smoothing parameter for psi.
-#' @param ridge small ridge added to the information matrix for numerical stability.
 #' @param w_cap optional cap on psi'(s); default Inf
-#' @param ls_beta line search backtracking shrink factor in (0,1); default 0.1.
-#' @param ls_c Armijo line search constant in (0,1); default 1e-2 (for ascent).
-#' @param ls_max maximum backtracking steps; default 20.
+#' @param ls_beta line search backtracking shrink factor in (0,1); default 0.35.
+#' @param ls_c Armijo line search constant in (0,1); default 1e-4 (for ascent).
+#' @param ls_max maximum backtracking steps; default 30.
 #' @return Updated X.
 #' @export
 fisher_sweep_X <- function(
     A, X, Z, B, sign_diag,
-    tau = 0.05, ridge = 0, w_cap = Inf,
-    ls_beta = 0.1, ls_c = 1e-2, ls_max = 20) {
+    tau = 0.05, w_cap = Inf,
+    ls_beta = 0.35, ls_c = 1e-4, ls_max = 30) {
 
-  n <- nrow(X); d <- ncol(X)
+  n <- nrow(X); d <- ncol(X); p_cov <- nrow(Z)
 
   # WORKING STATE that we keep updating as we sweep
   Xcur <- X
@@ -41,51 +40,76 @@ fisher_sweep_X <- function(
     w <- dpsi(s, tau = tau)             # w_j = ψ'(s_j)
     if (is.finite(w_cap)) w <- pmin(w, w_cap)  # optional clipping
 
-    r <- (A[i, ] - s) * w               # r_j = (A_ij - s_j) ψ'(s_j), n-vector
-    g_net <- as.vector(Ytcur %*% r)        # Σ_j r_j y_j, d-vector
+    # IMPORTANT: For graphs without self-loops (diag(A)=0), exclude j=i term
+    w[i] <- 0
+
+    r <- (A[i, ] - s) * w               # r_j = (A_ij - s_j) ψ'(s_j), n-vector (j≠i)
+    s_net <- as.vector(Ytcur %*% r)        # Σ_{j≠i} r_j y_j, d-vector
     bi <- B[, i]                        # b_i
     resid <- bi - Z %*% xi
-    g_cov <- as.vector(t(Z) %*% resid)
-    G <- g_net + g_cov                  # ∂l_n/∂x_i
+    s_cov <- as.vector(t(Z) %*% resid)
+    S <- s_net + s_cov  # score function
 
     # ----- information and Newton/Fisher direction -----
-    I_net <- Ytcur %*% (Ycur * w)             # Y^T diag(w) Y (broadcast trick)
-    I_cov <- ZtZ                # I_cov <- ZtZ,
-    #I <- I_net + I_cov + diag(ridge, d) # ridge adds a tiny λI for numerical stability (not in the theory; practical).
-    I <- I_net + I_cov + if (ridge > 0) diag(ridge, d) else 0
+    # Fisher information for node i: sum over all edges incident to i
+    # For graphs without self-loops, sum over j≠i only (w[i] already set to 0)
+    # MODIFICATION: Truncate s to [tau, 1-tau] in Fisher info denominator only
+    s_clipped <- pmax(pmin(s, 1 - tau), tau)
+    w_fisher <- dpsi(s_clipped, tau = tau)
+    if (is.finite(w_cap)) w_fisher <- pmin(w_fisher, w_cap)
+    w_fisher[i] <- 0
+    G_net <- Ytcur %*% (Ycur * w_fisher)      # Y^T diag(w_fisher) Y, with w[i]=0
+    G_cov <- ZtZ                              # G_cov <- ZtZ
+    G <- G_net + G_cov        # Total Fisher information 
 
-    # solve I p = G for direction p (ascent) using Cholesky (stable, efficient) if I is SPD.
+    # solve G p = S for direction p (ascent) using Cholesky (stable, efficient) if G is SPD.
     # If chol fails numerically, fall back to solve().
-    R <- try(chol(I), silent = TRUE)
-    p <- if (!inherits(R, "try-error")) backsolve(R, forwardsolve(t(R), G)) else solve(I, G)
+    R <- try(chol(G), silent = TRUE)
+    p <- if (!inherits(R, "try-error")) backsolve(R, forwardsolve(t(R), S)) else solve(G, S)
 
     # fallback: if direction is not ascent, use gradient
-    gp <- sum(G * p)
-    if (!is.finite(gp) || gp <= 0) {
-      p  <- G
-      gp <- sum(G * p)
-      if (!is.finite(gp) || gp <= 0) next
-    } # monitor numerically whether the Newton/Fisher direction p is truly an ascent direction
-    # g^tp > 0: p is ascent (good)
+    # sp <- sum(S * p)
+    # if (!is.finite(sp) || sp <= 0) {
+    #   p  <- S
+    #   sp <- sum(S * p)
+    #   if (!is.finite(sp) || sp <= 0) next
+    # } # monitor numerically whether the Newton/Fisher direction p is truly an ascent direction
+    # # s^tp > 0: p is ascent (good)
+    
+    # ----- FALLBACK MONITORING -----
+    sp <- sum(S * p)
+    if (!is.finite(sp) || sp <= 0) {
+      message(sprintf("Warning: Node %d - Fisher direction is not ascent (sp = %.2e). Falling back to Gradient.", i, sp))
+      p  <- S
+      sp <- sum(S * p)
+      if (!is.finite(sp) || sp <= 0) {
+        message(sprintf("Critical: Node %d - Gradient itself is invalid. Skipping update.", i))
+        next
+      }
+    }
 
     # ----- backtracking line search (Armijo for MAXIMIZATION) around CURRENT state -----
-    # Condition:  ℓ(xi + η p) >= ℓ(xi) + ls_c * η * (G^T p)
-    # where ℓ is the surrogate objective holding Y,Z fixed except xi.
+    # Condition:  l(xi + η p) >= l(xi) + ls_c * η * (S^T p)
+    # where l is the surrogate objective holding Y,Z fixed except xi.
+    best_eta <- 0 # basically not changing
     eta <- 1.0
-    # current objective (only needs terms depending on xi, but we reuse full helper for clarity)
-    f0  <- surrogate_objective(A, Xcur, Z, B, sign_diag, tau = tau)
+    f0 <- surrogate_objective(A, Xcur, Z, B, sign_diag, tau = tau)
+    
     for (bt in 1:ls_max) {
-     xi_try <- xi + eta * as.vector(p) # 1) trial update of x_i
-     X_try  <- Xcur                       # 2) copy current X
-     X_try[i, ] <- xi_try              #    and replace only row i
-     # recompute Y for objective (only row i changes; keep it simple here)
-     f_try <- surrogate_objective(A, X_try, Z, B, sign_diag, tau = tau)
-     if (f_try >= f0 + ls_c * eta * gp) break # 3) Armijo (ascent) test: sufficient increase -> accept
-     eta <- eta * ls_beta              # 4) otherwise shrink eta (backtrack)
+      xi_try <- xi + eta * as.vector(p)
+      X_try <- Xcur
+      X_try[i, ] <- xi_try
+      f_try <- surrogate_objective(A, X_try, Z, B, sign_diag, tau = tau)
+      
+      if (f_try >= f0 + ls_c * eta * sp) {
+        best_eta <- eta # save successful eta
+        break 
+      }
+      eta <- eta * ls_beta
     }
 
     # accept step and UPDATE THE WORKING STATE
-    Xcur[i, ] <- xi + eta * as.vector(p)
+    Xcur[i, ] <- xi + best_eta * as.vector(p)
     Ycur[i, ] <- Xcur[i, ] %*% sign_diag
     Ytcur <-  t(Ycur)
     }
@@ -103,9 +127,11 @@ fisher_sweep_X <- function(
 #' @return Numeric scalar: the surrogate objective value.
 #' @export
 surrogate_objective <- function(A, X, Z, B, sign_diag, tau = 0.05) {
-  # Network term: sum_{ij} [(A_ij - s_ij) ψ(s_ij) + Ψ(s_ij)], s_ij = x_i^T y_j
+  # Network term: sum over (i,j) pairs with i≠j: Σ_i Σ_{j≠i} [(A_ij - s_ij) ψ(s_ij) + Ψ(s_ij)]
+  # For graphs without self-loops (diag(A)=0), exclude diagonal terms
   Y <- X %*% sign_diag
   S <- X %*% t(Y)                              # S_{ij} = x_i^T y_j
+  diag(S) <- 0                                 # Exclude diagonal (no self-loops)
   net <- sum((A - S) * psi(S, tau = tau) + Psi(S, tau = tau))
   # Gaussian covariate term: -1/2 ||B - Z X^T||_F^2
   cov <- -0.5 * sum((B - Z %*% t(X))^2)
