@@ -10,7 +10,7 @@ cat("  AGGREGATING: 3D GRDPG ASE vs OSE vs cgrdpg, n=1000\n")
 cat("  Methods: cgrdpg-TRUE, cgrdpg-PLUGIN, ASE-TRUE, ASE-PLUGIN, OSE-TRUE, OSE-PLUGIN\n")
 cat("============================================================================\n\n")
 
-results_dir <- "results_3d_ase_ose_n1000"
+results_dir <- "results_3d_ase_ose_cgrdpg_n1000"
 if (!dir.exists(results_dir)) stop(sprintf("Directory '%s' not found!", results_dir))
 
 files  <- list.files(results_dir, pattern = "^rep_[0-9]+\\.rds$", full.names = TRUE)

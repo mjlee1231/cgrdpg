@@ -19,7 +19,7 @@
 module load r/4.3.1
 
 mkdir -p logs
-mkdir -p results_3d_ase_ose_n1000
+mkdir -p results_3d_ase_ose_cgrdpg_n1000
 
 echo "========================================"
 echo "Job started at: $(date)"

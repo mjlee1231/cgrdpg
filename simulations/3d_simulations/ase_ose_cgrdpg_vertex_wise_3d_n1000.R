@@ -22,7 +22,7 @@ eps_clip  <- 1e-10
 chi2_crit <- qchisq(0.95, df = d)
 S         <- diag(c(1, 1, -1))
 
-output_dir <- "results_3d_ase_ose_n1000"
+output_dir <- "results_3d_ase_ose_cgrdpg_n1000"
 if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
 
 cat("============================================================================\n")
