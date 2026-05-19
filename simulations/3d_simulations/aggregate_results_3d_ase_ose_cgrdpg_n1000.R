@@ -174,7 +174,7 @@ p3 <- ggplot(cov_long, aes(x = Precision, y = Coverage, fill = Precision)) +
   geom_boxplot() +
   geom_hline(yintercept = 95, linetype = "dashed", color = "red") +
   facet_wrap(~ Estimator, nrow = 1) +
-  scale_fill_manual(values = c(TRUE = "#4C72B0", PLUGIN = "#DD8452")) +
+  scale_fill_manual(values = c("TRUE" = "#4C72B0", "PLUGIN" = "#DD8452")) +
   labs(
     title   = sprintf("TRUE vs PLUGIN Coverage by Estimator: 3D GRDPG (n=%d, %d reps)", n, n_reps),
     x = NULL, y = "Coverage Rate (%)"
