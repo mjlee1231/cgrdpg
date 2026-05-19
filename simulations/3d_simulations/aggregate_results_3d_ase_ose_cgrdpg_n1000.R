@@ -10,8 +10,12 @@ cat("  AGGREGATING: 3D GRDPG ASE vs OSE vs cgrdpg, n=1000\n")
 cat("  Methods: cgrdpg-TRUE, cgrdpg-PLUGIN, ASE-TRUE, ASE-PLUGIN, OSE-TRUE, OSE-PLUGIN\n")
 cat("============================================================================\n\n")
 
-results_dir <- "results_3d_ase_ose_n1000"
+results_dir <- "results_3d_ase_ose_cgrdpg_n1000"
 if (!dir.exists(results_dir)) stop(sprintf("Directory '%s' not found!", results_dir))
+
+# Create output directory for aggregated results and plots
+output_dir <- "outputs_n1000"
+if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
 
 files  <- list.files(results_dir, pattern = "^rep_[0-9]+\\.rds$", full.names = TRUE)
 n_reps <- length(files)
@@ -63,17 +67,18 @@ for (est in c("cgrdpg", "ase", "ose")) {
 }
 
 # --- Timing ---
-cat("\nTiming (mean per replication):\n")
-cgrdpg_t  <- mean(sapply(all_results, function(x) x$timing$cgrdpg_time))
-ase_t     <- mean(sapply(all_results, function(x) x$timing$ase_time))
-ose_t     <- mean(sapply(all_results, function(x) x$timing$ose_time))
-cov_t     <- mean(sapply(all_results, function(x) x$timing$coverage_time))
-total_t   <- mean(sapply(all_results, function(x) x$timing$rep_time_min))
-cat(sprintf("  cgrdpg fit:    %.1f sec\n", cgrdpg_t))
-cat(sprintf("  ASE:           %.1f sec\n", ase_t))
-cat(sprintf("  OSE:           %.1f sec\n", ose_t))
-cat(sprintf("  Coverage:      %.1f sec\n", cov_t))
-cat(sprintf("  Total:         %.2f min\n", total_t))
+cat("\nTiming (mean ± SD per replication):\n")
+cgrdpg_times <- sapply(all_results, function(x) x$timing$cgrdpg_time)
+ase_times    <- sapply(all_results, function(x) x$timing$ase_time)
+ose_times    <- sapply(all_results, function(x) x$timing$ose_time)
+cov_times    <- sapply(all_results, function(x) x$timing$coverage_time)
+total_times  <- sapply(all_results, function(x) x$timing$rep_time_min)
+
+cat(sprintf("  cgrdpg fit:    %.1f ± %.1f sec\n", mean(cgrdpg_times), sd(cgrdpg_times)))
+cat(sprintf("  ASE:           %.1f ± %.1f sec\n", mean(ase_times), sd(ase_times)))
+cat(sprintf("  OSE:           %.1f ± %.1f sec\n", mean(ose_times), sd(ose_times)))
+cat(sprintf("  Coverage:      %.1f ± %.1f sec\n", mean(cov_times), sd(cov_times)))
+cat(sprintf("  Total:         %.2f ± %.2f min\n", mean(total_times), sd(total_times)))
 
 # --- Convergence ---
 conv <- mean(sapply(all_results, function(x) x$converged))
@@ -92,8 +97,8 @@ aggregated <- list(
   sse_all      = sapply(all_results, function(x) x$sse),
   convergence  = conv
 )
-saveRDS(aggregated, "aggregated_3d_ase_ose_n1000.rds")
-cat("Aggregated results saved to: aggregated_3d_ase_ose_n1000.rds\n")
+saveRDS(aggregated, file.path(output_dir, "aggregated_3d_ase_ose_n1000.rds"))
+cat(sprintf("Aggregated results saved to: %s/aggregated_3d_ase_ose_n1000.rds\n", output_dir))
 
 # --- Summary CSV ---
 summary_df <- data.frame(
@@ -103,8 +108,8 @@ summary_df <- data.frame(
   Min_Coverage   = 100 * apply(cov_matrix, 1, min),
   Max_Coverage   = 100 * apply(cov_matrix, 1, max)
 )
-write.csv(summary_df, "summary_3d_ase_ose_n1000.csv", row.names = FALSE)
-cat("Summary saved to: summary_3d_ase_ose_n1000.csv\n\n")
+write.csv(summary_df, file.path(output_dir, "summary_3d_ase_ose_n1000.csv"), row.names = FALSE)
+cat(sprintf("Summary saved to: %s/summary_3d_ase_ose_n1000.csv\n\n", output_dir))
 
 # --- Plot 1: Boxplot of overall coverage per method ---
 cat("Creating plots...\n")
@@ -134,7 +139,7 @@ p1 <- ggplot(cov_long, aes(x = Method, y = Coverage, fill = Estimator)) +
   theme_minimal(base_size = 13) +
   theme(axis.text.x = element_text(angle = 30, hjust = 1))
 
-pdf("coverage_boxplot_3d_ase_ose_n1000.pdf", width = 10, height = 6)
+pdf(file.path(output_dir, "coverage_boxplot_3d_ase_ose_n1000.pdf"), width = 10, height = 6)
 print(p1)
 dev.off()
 
@@ -165,7 +170,7 @@ p2 <- ggplot(vertex_df, aes(x = Vertex, y = Coverage, color = Method)) +
   ) +
   theme_minimal(base_size = 13)
 
-pdf("vertex_coverage_3d_ase_ose_n1000.pdf", width = 12, height = 6)
+pdf(file.path(output_dir, "vertex_coverage_3d_ase_ose_n1000.pdf"), width = 12, height = 6)
 print(p2)
 dev.off()
 
@@ -174,7 +179,7 @@ p3 <- ggplot(cov_long, aes(x = Precision, y = Coverage, fill = Precision)) +
   geom_boxplot() +
   geom_hline(yintercept = 95, linetype = "dashed", color = "red") +
   facet_wrap(~ Estimator, nrow = 1) +
-  scale_fill_manual(values = c(TRUE = "#4C72B0", PLUGIN = "#DD8452")) +
+  scale_fill_manual(values = c("TRUE" = "#4C72B0", "PLUGIN" = "#DD8452")) +
   labs(
     title   = sprintf("TRUE vs PLUGIN Coverage by Estimator: 3D GRDPG (n=%d, %d reps)", n, n_reps),
     x = NULL, y = "Coverage Rate (%)"
@@ -182,14 +187,14 @@ p3 <- ggplot(cov_long, aes(x = Precision, y = Coverage, fill = Precision)) +
   theme_minimal(base_size = 13) +
   theme(legend.position = "none")
 
-pdf("true_vs_plugin_3d_ase_ose_n1000.pdf", width = 10, height = 5)
+pdf(file.path(output_dir, "true_vs_plugin_3d_ase_ose_n1000.pdf"), width = 10, height = 5)
 print(p3)
 dev.off()
 
 cat("Plots saved:\n")
-cat("  - coverage_boxplot_3d_ase_ose_n1000.pdf\n")
-cat("  - vertex_coverage_3d_ase_ose_n1000.pdf\n")
-cat("  - true_vs_plugin_3d_ase_ose_n1000.pdf\n")
+cat(sprintf("  - %s/coverage_boxplot_3d_ase_ose_n1000.pdf\n", output_dir))
+cat(sprintf("  - %s/vertex_coverage_3d_ase_ose_n1000.pdf\n", output_dir))
+cat(sprintf("  - %s/true_vs_plugin_3d_ase_ose_n1000.pdf\n", output_dir))
 cat("\n============================================================================\n")
 cat("AGGREGATION COMPLETE\n")
 cat("============================================================================\n")
