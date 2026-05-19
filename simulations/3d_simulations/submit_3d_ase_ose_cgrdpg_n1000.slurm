@@ -8,8 +8,8 @@
 #SBATCH --mem=128G
 #SBATCH --time=12:00:00
 #SBATCH --array=1-100
-#SBATCH --output=logs/rep%03a_%j.out
-#SBATCH --error=logs/rep%03a_%j.err
+#SBATCH --output=logs_n1000/rep%03a_%j.out
+#SBATCH --error=logs_n1000/rep%03a_%j.err
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=mle6@iu.edu
 
@@ -18,7 +18,7 @@
 
 module load r/4.3.1
 
-mkdir -p logs
+mkdir -p logs_n1000
 mkdir -p results_3d_ase_ose_cgrdpg_n1000
 
 echo "========================================"
