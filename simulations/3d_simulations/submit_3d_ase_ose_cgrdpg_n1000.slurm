@@ -35,7 +35,7 @@ cd $SLURM_SUBMIT_DIR
 
 START_TIME=$(date +%s)
 
-Rscript ase_ose_vertex_wise_3d_n1000.R $SLURM_ARRAY_TASK_ID
+Rscript ase_ose_cgrdpg_vertex_wise_3d_n1000.R $SLURM_ARRAY_TASK_ID
 
 END_TIME=$(date +%s)
 DURATION=$((END_TIME - START_TIME))
