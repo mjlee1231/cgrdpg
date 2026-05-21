@@ -126,7 +126,7 @@ cat(sprintf("Using %d cores for cgrdpg parallel fitting\n\n", ncores))
                                       maxit = maxit, tol = tol, tau = tau)
   )
   cgrdpg_time <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
-  X_cgrdpg    <- procrustes_align(fit$X, X0, S = S)$X_aligned  # Signature-aware alignment
+  X_cgrdpg    <- procrustes_align(fit$X, X0, S = NULL)$X_aligned  # Standard Procrustes
   Y_cgrdpg    <- X_cgrdpg %*% S
   Z_cgrdpg    <- B %*% X_cgrdpg %*% solve(t(X_cgrdpg) %*% X_cgrdpg)
   cat(sprintf("cgrdpg: converged=%s, iters=%d, time=%.1fs\n",
@@ -138,7 +138,7 @@ cat(sprintf("Using %d cores for cgrdpg parallel fitting\n\n", ncores))
   A_aug     <- A; diag(A_aug) <- rowSums(A) / (n - 1)
   X_ase_raw <- ase_grdpg(A_aug, d = d)$X
   ase_time  <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
-  X_ase     <- procrustes_align(X_ase_raw, X0, S = S)$X_aligned  # Signature-aware alignment
+  X_ase     <- procrustes_align(X_ase_raw, X0, S = NULL)$X_aligned  # Standard Procrustes
   cat(sprintf("ASE: time=%.1fs\n", ase_time))
 
   # 5. OSE
@@ -146,7 +146,7 @@ cat(sprintf("Using %d cores for cgrdpg parallel fitting\n\n", ncores))
   t0        <- Sys.time()
   X_ose_raw <- compute_ose_step(A, X_ase_raw, eps_clip)
   ose_time  <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
-  X_ose     <- procrustes_align(X_ose_raw, X0, S = S)$X_aligned  # Signature-aware alignment
+  X_ose     <- procrustes_align(X_ose_raw, X0, S = NULL)$X_aligned  # Standard Procrustes
   cat(sprintf("OSE: time=%.1fs\n", ose_time))
 
   sse <- c(cgrdpg = sum((X_cgrdpg - X0)^2),

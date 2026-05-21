@@ -71,7 +71,7 @@ cat("\nTiming (mean ± SD per replication):\n")
 cgrdpg_times <- sapply(all_results, function(x) x$timing$cgrdpg_time)
 ase_times    <- sapply(all_results, function(x) x$timing$ase_time)
 ose_times    <- sapply(all_results, function(x) x$timing$ose_time)
-cov_times    <- sapply(all_results, function(x) x$timing$coverage_time)
+cov_times    <- sapply(all_results, function(x) x$timing$cov_time)
 total_times  <- sapply(all_results, function(x) x$timing$rep_time_min)
 
 cat(sprintf("  cgrdpg fit:    %.1f ± %.1f sec\n", mean(cgrdpg_times), sd(cgrdpg_times)))
