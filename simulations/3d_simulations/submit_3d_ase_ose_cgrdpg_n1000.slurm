@@ -13,8 +13,8 @@
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=mle6@iu.edu
 
-# 3D GRDPG: ASE vs OSE vs cgrdpg vertex-wise coverage
-# n=1000, 100 replications (1 rep per node), p_cov=500, S=diag(1,1,-1)
+# 3D RDPG: ASE vs OSE vs cgrdpg vertex-wise coverage
+# n=1000, 100 replications (1 rep per node), p_cov=500, S=diag(1,1,1)=Identity (standard RDPG)
 
 module load r/4.3.1
 

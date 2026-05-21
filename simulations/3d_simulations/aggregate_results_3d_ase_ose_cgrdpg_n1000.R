@@ -6,8 +6,9 @@ library(dplyr)
 library(tidyr)
 
 cat("============================================================================\n")
-cat("  AGGREGATING: 3D GRDPG ASE vs OSE vs cgrdpg, n=1000\n")
+cat("  AGGREGATING: 3D RDPG ASE vs OSE vs cgrdpg, n=1000\n")
 cat("  Methods: cgrdpg-TRUE, cgrdpg-PLUGIN, ASE-TRUE, ASE-PLUGIN, OSE-TRUE, OSE-PLUGIN\n")
+cat("  S = diag(1,1,1) = Identity (standard RDPG)\n")
 cat("============================================================================\n\n")
 
 results_dir <- "results_3d_ase_ose_cgrdpg_n1000"
@@ -132,8 +133,8 @@ p1 <- ggplot(cov_long, aes(x = Method, y = Coverage, fill = Estimator)) +
   geom_hline(yintercept = 95, linetype = "dashed", color = "red", linewidth = 0.8) +
   scale_fill_manual(values = c(cgrdpg = "#4C72B0", ASE = "#55A868", OSE = "#C44E52")) +
   labs(
-    title = sprintf("Coverage Rates: 3D GRDPG (n=%d, %d reps)", n, n_reps),
-    subtitle = "S = diag(1,1,-1), p_cov=500 | Dashed line: 95% nominal",
+    title = sprintf("Coverage Rates: 3D RDPG (n=%d, %d reps)", n, n_reps),
+    subtitle = "S = diag(1,1,1) = Identity, p_cov=500 | Dashed line: 95% nominal",
     x = NULL, y = "Coverage Rate (%)"
   ) +
   theme_minimal(base_size = 13) +
@@ -164,8 +165,8 @@ p2 <- ggplot(vertex_df, aes(x = Vertex, y = Coverage, color = Method)) +
     ose_true      = "#d62728", ose_plugin    = "#ff9896"
   )) +
   labs(
-    title   = sprintf("Vertex-wise Coverage: 3D GRDPG (n=%d, %d reps)", n, n_reps),
-    subtitle = "S = diag(1,1,-1), p_cov=500 | Dashed line: 95% nominal",
+    title   = sprintf("Vertex-wise Coverage: 3D RDPG (n=%d, %d reps)", n, n_reps),
+    subtitle = "S = diag(1,1,1) = Identity, p_cov=500 | Dashed line: 95% nominal",
     x = "Vertex Index", y = "Coverage Rate (%)", color = "Method"
   ) +
   theme_minimal(base_size = 13)
@@ -181,7 +182,7 @@ p3 <- ggplot(cov_long, aes(x = Precision, y = Coverage, fill = Precision)) +
   facet_wrap(~ Estimator, nrow = 1) +
   scale_fill_manual(values = c("TRUE" = "#4C72B0", "PLUGIN" = "#DD8452")) +
   labs(
-    title   = sprintf("TRUE vs PLUGIN Coverage by Estimator: 3D GRDPG (n=%d, %d reps)", n, n_reps),
+    title   = sprintf("TRUE vs PLUGIN Coverage by Estimator: 3D RDPG (n=%d, %d reps)", n, n_reps),
     x = NULL, y = "Coverage Rate (%)"
   ) +
   theme_minimal(base_size = 13) +

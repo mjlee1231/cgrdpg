@@ -1,8 +1,8 @@
 #!/usr/bin/env Rscript
-# ASE vs OSE vs cgrdpg vertex-wise coverage: 3D GRDPG, n=1000, 100 reps
+# ASE vs OSE vs cgrdpg vertex-wise coverage: 3D RDPG, n=1000, 100 reps
 # Single node: all 100 replications run sequentially
 # Methods: cgrdpg-TRUE, cgrdpg-PLUGIN, ASE-TRUE, ASE-PLUGIN, OSE-TRUE, OSE-PLUGIN
-# Signature matrix: S = diag(1, 1, -1), p_cov=500
+# Signature matrix: S = diag(1, 1, 1) = Identity (standard RDPG), p_cov=500
 
 library(cgrdpg)
 
@@ -20,16 +20,16 @@ tol       <- 0.01
 tau       <- 0.01
 eps_clip  <- 1e-10
 chi2_crit <- qchisq(0.95, df = d)
-S         <- diag(c(1, 1, -1))
+S         <- diag(c(1, 1, 1))  # Standard RDPG (identity signature)
 
 output_dir <- "results_3d_ase_ose_cgrdpg_n1000"
 if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
 
 cat("============================================================================\n")
-cat("  ASE vs OSE vs cgrdpg Vertex-wise Coverage: 3D GRDPG, n=1000\n")
+cat("  ASE vs OSE vs cgrdpg Vertex-wise Coverage: 3D RDPG, n=1000\n")
 cat(sprintf("  Replication %d/100\n", rep_id))
 cat("  Methods: cgrdpg-TRUE, cgrdpg-PLUGIN, ASE-TRUE, ASE-PLUGIN, OSE-TRUE, OSE-PLUGIN\n")
-cat("  S = diag(1, 1, -1), p_cov=500\n")
+cat("  S = diag(1, 1, 1) = Identity (standard RDPG), p_cov=500\n")
 cat("============================================================================\n\n")
 
 # --- Helpers ---
@@ -120,9 +120,9 @@ cat(sprintf("Using %d cores for cgrdpg parallel fitting\n\n", ncores))
   cat("Fitting cgrdpg...\n")
   t0  <- Sys.time()
   fit <- tryCatch(
-    fit_grdpg_cov_parallel(A, B, d = d, p = 2, q = 1,
+    fit_grdpg_cov_parallel(A, B, d = d, p = 3, q = 0,
                            maxit = maxit, tol = tol, tau = tau, ncores = ncores),
-    error = function(e) fit_grdpg_cov(A, B, d = d, p = 2, q = 1,
+    error = function(e) fit_grdpg_cov(A, B, d = d, p = 3, q = 0,
                                       maxit = maxit, tol = tol, tau = tau)
   )
   cgrdpg_time <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
