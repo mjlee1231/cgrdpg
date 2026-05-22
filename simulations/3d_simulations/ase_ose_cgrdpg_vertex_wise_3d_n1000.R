@@ -1,8 +1,8 @@
 #!/usr/bin/env Rscript
-# ASE vs OSE vs cgrdpg vertex-wise coverage: 3D RDPG, n=1000, 100 reps
+# ASE vs OSE vs cgrdpg vertex-wise coverage: 3D GRDPG, n=1000, 100 reps
 # Single node: all 100 replications run sequentially
 # Methods: cgrdpg-TRUE, cgrdpg-PLUGIN, ASE-TRUE, ASE-PLUGIN, OSE-TRUE, OSE-PLUGIN
-# Signature matrix: S = diag(1, 1, 1) = Identity (standard RDPG), p_cov=500
+# Signature matrix: S = diag(1, 1, -1) (indefinite GRDPG), p_cov=500
 
 library(cgrdpg)
 
@@ -20,31 +20,39 @@ tol       <- 0.01
 tau       <- 0.01
 eps_clip  <- 1e-10
 chi2_crit <- qchisq(0.95, df = d)
-S         <- diag(c(1, 1, 1))  # Standard RDPG (identity signature)
+S         <- diag(c(1, 1, -1))  # Indefinite GRDPG signature
 
 output_dir <- "results_3d_ase_ose_cgrdpg_n1000"
 if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
 
 cat("============================================================================\n")
-cat("  ASE vs OSE vs cgrdpg Vertex-wise Coverage: 3D RDPG, n=1000\n")
+cat("  ASE vs OSE vs cgrdpg Vertex-wise Coverage: 3D GRDPG, n=1000\n")
 cat(sprintf("  Replication %d/100\n", rep_id))
 cat("  Methods: cgrdpg-TRUE, cgrdpg-PLUGIN, ASE-TRUE, ASE-PLUGIN, OSE-TRUE, OSE-PLUGIN\n")
-cat("  S = diag(1, 1, 1) = Identity (standard RDPG), p_cov=500\n")
+cat("  S = diag(1, 1, -1) (indefinite signature), p_cov=500\n")
 cat("============================================================================\n\n")
 
 # --- Helpers ---
 
 procrustes_align <- function(X_est, X_target, S = NULL) {
-  # Standard orthogonal Procrustes (for ASE/OSE without signature)
-  if (is.null(S)) {
-    M <- t(X_est) %*% X_target
+  # For GRDPG with indefinite S: align Y = X*S positions, then recover X
+  # This respects the O(p,q) identifiability constraint
+  if (!is.null(S)) {
+    Y_est <- X_est %*% S
+    Y_target <- X_target %*% S
+    M <- t(Y_est) %*% Y_target
+    svd_res <- svd(M)
+    Q <- svd_res$u %*% t(svd_res$v)
+    Y_aligned <- Y_est %*% Q
+    X_aligned <- Y_aligned %*% S  # Recover X from Y (since S^2 = I for signature matrices)
+    return(list(X_aligned = X_aligned, Q = Q))
   } else {
-    # Signature-aware Procrustes for GRDPG with indefinite S
-    M <- t(X_est) %*% X_target %*% S
+    # Standard Procrustes for RDPG with S = I
+    M <- t(X_est) %*% X_target
+    svd_res <- svd(M)
+    Q <- svd_res$u %*% t(svd_res$v)
+    return(list(X_aligned = X_est %*% Q, Q = Q))
   }
-  svd_res <- svd(M)
-  Q <- svd_res$u %*% t(svd_res$v)
-  list(X_aligned = X_est %*% Q, Q = Q)
 }
 
 compute_ose_step <- function(A, X_init, clipping_val) {
@@ -120,13 +128,13 @@ cat(sprintf("Using %d cores for cgrdpg parallel fitting\n\n", ncores))
   cat("Fitting cgrdpg...\n")
   t0  <- Sys.time()
   fit <- tryCatch(
-    fit_grdpg_cov_parallel(A, B, d = d, p = 3, q = 0,
+    fit_grdpg_cov_parallel(A, B, d = d, p = 2, q = 1,
                            maxit = maxit, tol = tol, tau = tau, ncores = ncores),
-    error = function(e) fit_grdpg_cov(A, B, d = d, p = 3, q = 0,
+    error = function(e) fit_grdpg_cov(A, B, d = d, p = 2, q = 1,
                                       maxit = maxit, tol = tol, tau = tau)
   )
   cgrdpg_time <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
-  X_cgrdpg    <- procrustes_align(fit$X, X0, S = NULL)$X_aligned  # Standard Procrustes
+  X_cgrdpg    <- procrustes_align(fit$X, X0, S = S)$X_aligned  # Indefinite Procrustes
   Y_cgrdpg    <- X_cgrdpg %*% S
   Z_cgrdpg    <- B %*% X_cgrdpg %*% solve(t(X_cgrdpg) %*% X_cgrdpg)
   cat(sprintf("cgrdpg: converged=%s, iters=%d, time=%.1fs\n",
@@ -138,7 +146,7 @@ cat(sprintf("Using %d cores for cgrdpg parallel fitting\n\n", ncores))
   A_aug     <- A; diag(A_aug) <- rowSums(A) / (n - 1)
   X_ase_raw <- ase_grdpg(A_aug, d = d)$X
   ase_time  <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
-  X_ase     <- procrustes_align(X_ase_raw, X0, S = NULL)$X_aligned  # Standard Procrustes
+  X_ase     <- procrustes_align(X_ase_raw, X0, S = S)$X_aligned  # Indefinite Procrustes
   cat(sprintf("ASE: time=%.1fs\n", ase_time))
 
   # 5. OSE
@@ -146,7 +154,7 @@ cat(sprintf("Using %d cores for cgrdpg parallel fitting\n\n", ncores))
   t0        <- Sys.time()
   X_ose_raw <- compute_ose_step(A, X_ase_raw, eps_clip)
   ose_time  <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
-  X_ose     <- procrustes_align(X_ose_raw, X0, S = NULL)$X_aligned  # Standard Procrustes
+  X_ose     <- procrustes_align(X_ose_raw, X0, S = S)$X_aligned  # Indefinite Procrustes
   cat(sprintf("OSE: time=%.1fs\n", ose_time))
 
   sse <- c(cgrdpg = sum((X_cgrdpg - X0)^2),
