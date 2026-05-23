@@ -17,7 +17,7 @@ p_cov     <- 500
 d         <- 3
 maxit     <- 30
 tol       <- 0.01
-tau       <- 0.01
+tau       <- 0.001  # Smaller tau for edge probs near 1
 eps_clip  <- 1e-10
 chi2_crit <- qchisq(0.95, df = d)
 S         <- diag(c(1, 1, -1))  # Indefinite GRDPG signature
