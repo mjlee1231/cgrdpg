@@ -134,17 +134,20 @@ cat(sprintf("Using %d cores for cgrdpg parallel fitting\n\n", ncores))
   t0        <- Sys.time()
   A_aug     <- A; diag(A_aug) <- rowSums(A) / (n - 1)
   ase_fit   <- ase_grdpg(A_aug, d = d)
-  X_ase_raw <- ase_fit$X_signed  # Use SIGNED version for GRDPG
+  X_ase_signed <- ase_fit$X_signed  # Signed version for alignment
+  X_ase_unsigned <- ase_fit$X       # Unsigned version for OSE
   ase_time  <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
-  X_ase     <- procrustes_align(X_ase_raw, X0)$X_aligned  # Standard Procrustes
+  X_ase     <- procrustes_align(X_ase_signed, X0)$X_aligned  # Align signed ASE
   cat(sprintf("ASE: time=%.1fs\n", ase_time))
 
-  # 5. OSE (use signed ASE as initialization)
+  # 5. OSE (use UNSIGNED ASE as initialization - friend's approach keeps OSE in unsigned space)
   cat("Computing OSE...\n")
   t0        <- Sys.time()
-  X_ose_raw <- compute_ose_step(A, X_ase_raw, eps_clip)  # Initialize with signed ASE
+  X_ose_raw <- compute_ose_step(A, X_ase_unsigned, eps_clip)  # Initialize with UNSIGNED ASE
   ose_time  <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
-  X_ose     <- procrustes_align(X_ose_raw, X0)$X_aligned  # Standard Procrustes
+  # Convert OSE result to signed representation for alignment to X0
+  X_ose_signed <- X_ose_raw %*% S  # Apply signature matrix to match X0's space
+  X_ose     <- procrustes_align(X_ose_signed, X0)$X_aligned  # Align to X0
   cat(sprintf("OSE: time=%.1fs\n", ose_time))
 
   sse <- c(cgrdpg = sum((X_cgrdpg - X0)^2),
