@@ -16,11 +16,20 @@ ase_grdpg(A, d, p = NULL, q = NULL)
 \item{q}{number of negative eigenvalues. If \code{NULL}, taken as \code{d-p}.}
 }
 \value{
-a list with \code{X}, \code{eigvals}, \code{U}, \code{p}, \code{q}, \code{sign_diag}.
+a list with:
+\itemize{
+\item \code{X}: unsigned embedding \eqn{U |\Lambda|^{1/2}} (for RDPG with S=I)
+\item \code{X_signed}: signed embedding \eqn{U |\Lambda|^{1/2} sign(\Lambda)} (for GRDPG with indefinite S)
+\item \code{eigvals}: eigenvalues
+\item \code{U}: eigenvectors
+\item \code{p}, \code{q}: signature parameters
+\item \code{sign_diag}: signature matrix
+}
 }
 \description{
 Compute the \eqn{d}-dimensional adjacency spectral embedding of a symmetric adjacency matrix.
 We order eigenpairs by descending absolute eigenvalues (appropriate for GRDPG) and form
-\eqn{X = U |\Lambda|^{1/2}}. If the signature \code{(p,q)} is not supplied, it is estimated
-by counting the number of positive eigenvalues among the selected \eqn{d}.
+\eqn{X = U |\Lambda|^{1/2}} (unsigned) and \eqn{X_signed = U |\Lambda|^{1/2} sign(\Lambda)} (signed).
+If the signature \code{(p,q)} is not supplied, it is estimated by counting the number of
+positive eigenvalues among the selected \eqn{d}.
 }
