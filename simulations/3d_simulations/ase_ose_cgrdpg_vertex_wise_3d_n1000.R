@@ -44,19 +44,25 @@ procrustes_align <- function(X_est, X_target) {
   list(X_aligned = X_est %*% Q, Q = Q)
 }
 
-compute_ose_step <- function(A, X_init, clipping_val) {
+compute_ose_step <- function(A, X_unsigned, X_signed, clipping_val) {
+  # OSE for GRDPG: uses unsigned for update point, signed for edge probabilities
+  # Formula: x_i^OSE = x_i^unsigned + G^{-1} * grad
+  # where edge probs are: p_ij = x_i^unsigned^T * x_j^signed
   n_nodes <- nrow(A)
-  d_dim   <- ncol(X_init)
+  d_dim   <- ncol(X_unsigned)
   X_new   <- matrix(0, n_nodes, d_dim)
   for (i in 1:n_nodes) {
-    x_i     <- X_init[i, ]
+    x_i_unsigned <- X_unsigned[i, ]  # Point being updated (unsigned)
     idx_j   <- setdiff(1:n_nodes, i)
-    p_i     <- pmax(pmin(as.vector(X_init[idx_j, ] %*% x_i), 1 - clipping_val), clipping_val)
+    # Edge probabilities: unsigned^T * signed (GRDPG formula)
+    p_i     <- pmax(pmin(as.vector(x_i_unsigned %*% t(X_signed[idx_j, ])), 1 - clipping_val), clipping_val)
     resid   <- A[i, idx_j] - p_i
     w_score <- 1 / (p_i * (1 - p_i))
-    grad    <- colSums(X_init[idx_j, ] * (resid * w_score))
-    G       <- t(X_init[idx_j, ]) %*% (X_init[idx_j, ] * w_score)
-    X_new[i, ] <- x_i + solve(G + diag(1e-9, d_dim), grad)
+    # Gradient uses signed ASE
+    grad    <- colSums(X_signed[idx_j, ] * (resid * w_score))
+    # Hessian uses signed ASE
+    G       <- t(X_signed[idx_j, ]) %*% (X_signed[idx_j, ] * w_score)
+    X_new[i, ] <- x_i_unsigned + solve(G + diag(1e-9, d_dim), grad)
   }
   X_new
 }
@@ -77,10 +83,13 @@ compute_prec_ase <- function(i, X_mat, clipping_val) {
   Delta %*% solve(M_mat + diag(1e-9, d), Delta)
 }
 
-compute_prec_ose <- function(i, X_mat, clipping_val) {
-  idx_j  <- setdiff(1:nrow(X_mat), i)
-  p_vals <- pmax(pmin(as.vector(X_mat %*% X_mat[i, ]), 1 - clipping_val), clipping_val)
-  t(X_mat[idx_j, ]) %*% (X_mat[idx_j, ] * (1 / (p_vals[idx_j] * (1 - p_vals[idx_j]))))
+compute_prec_ose <- function(i, X_unsigned, X_signed, clipping_val) {
+  # OSE precision for GRDPG: edge probs are unsigned^T * signed
+  idx_j  <- setdiff(1:nrow(X_unsigned), i)
+  # Edge probabilities: unsigned[i]^T * signed[j] (GRDPG formula)
+  p_vals <- pmax(pmin(as.vector(X_unsigned[i, ] %*% t(X_signed)), 1 - clipping_val), clipping_val)
+  # Precision matrix uses signed ASE in the formula
+  t(X_signed[idx_j, ]) %*% (X_signed[idx_j, ] * (1 / (p_vals[idx_j] * (1 - p_vals[idx_j]))))
 }
 
 check_coverage <- function(err, Prec, scale = 1.0) {
@@ -129,25 +138,24 @@ cat(sprintf("Using %d cores for cgrdpg parallel fitting\n\n", ncores))
   cat(sprintf("cgrdpg: converged=%s, iters=%d, time=%.1fs\n",
               fit$converged, fit$iters, cgrdpg_time))
 
-  # 4. ASE (use SIGNED version for GRDPG)
+  # 4. ASE
   cat("Computing ASE...\n")
   t0        <- Sys.time()
   A_aug     <- A; diag(A_aug) <- rowSums(A) / (n - 1)
   ase_fit   <- ase_grdpg(A_aug, d = d)
-  X_ase_signed <- ase_fit$X_signed  # Signed version for alignment
-  X_ase_unsigned <- ase_fit$X       # Unsigned version for OSE
+  X_ase_signed <- ase_fit$X_signed    # Signed for edge probs and alignment
+  X_ase_unsigned <- ase_fit$X         # Unsigned for OSE update
   ase_time  <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
-  X_ase     <- procrustes_align(X_ase_signed, X0)$X_aligned  # Align signed ASE
+  X_ase     <- procrustes_align(X_ase_signed, X0)$X_aligned  # Align signed to X0
   cat(sprintf("ASE: time=%.1fs\n", ase_time))
 
-  # 5. OSE (use UNSIGNED ASE as initialization - friend's approach keeps OSE in unsigned space)
+  # 5. OSE for GRDPG: uses unsigned for update, signed for edge probs (friend's approach)
   cat("Computing OSE...\n")
   t0        <- Sys.time()
-  X_ose_raw <- compute_ose_step(A, X_ase_unsigned, eps_clip)  # Initialize with UNSIGNED ASE
+  X_ose_raw <- compute_ose_step(A, X_ase_unsigned, X_ase_signed, eps_clip)  # Pass both unsigned and signed
   ose_time  <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
-  # Convert OSE result to signed representation for alignment to X0
-  X_ose_signed <- X_ose_raw %*% S  # Apply signature matrix to match X0's space
-  X_ose     <- procrustes_align(X_ose_signed, X0)$X_aligned  # Align to X0
+  # OSE returns unsigned result, align directly to unsigned X0
+  X_ose     <- procrustes_align(X_ose_raw, X0)$X_aligned
   cat(sprintf("OSE: time=%.1fs\n", ose_time))
 
   sse <- c(cgrdpg = sum((X_cgrdpg - X0)^2),
@@ -180,11 +188,11 @@ cat(sprintf("Using %d cores for cgrdpg parallel fitting\n\n", ncores))
     results_mat[i, "ase_plugin"] <- check_coverage(
       X_ase[i,] - X0[i,], compute_prec_ase(i, X_ase, eps_clip))
 
-    # OSE
+    # OSE (use unsigned and signed versions for GRDPG precision)
     results_mat[i, "ose_true"]   <- check_coverage(
-      X_ose[i,] - X0[i,], compute_prec_ose(i, X0,    eps_clip))
+      X_ose[i,] - X0[i,], compute_prec_ose(i, X0, Y0, eps_clip))
     results_mat[i, "ose_plugin"] <- check_coverage(
-      X_ose[i,] - X0[i,], compute_prec_ose(i, X_ose, eps_clip))
+      X_ose[i,] - X0[i,], compute_prec_ose(i, X_ose, X_ose %*% S, eps_clip))
   }
 
   cov_time    <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
