@@ -17,7 +17,7 @@ p_cov     <- 500
 d         <- 3
 maxit     <- 30
 tol       <- 0.01
-tau       <- 0.01
+tau       <- 0.001
 eps_clip  <- 1e-10
 chi2_crit <- qchisq(0.95, df = d)
 S         <- diag(c(1, 1, -1))
@@ -103,10 +103,10 @@ if (ncores <= 1) ncores <- max(1, parallel::detectCores() - 1)
 cat(sprintf("Using %d cores for cgrdpg parallel fitting\n\n", ncores))
 
   # 1. Latent positions
-  theta <- pi * (0:(n - 1)) / (n - 1)
-  X0 <- cbind(0.175 * cos(theta) + 0.530,
-              0.175 * sin(theta) + 0.530,
-              0.040 * theta / pi + 0.315)
+  t <- (0:(n - 1)) / n
+  X0 <- cbind(0.15 * sin(2*pi*t) + 0.6,
+              0.15 * cos(2*pi*t) + 0.6,
+              0.15 * cos(4*pi*t))
   Y0 <- X0 %*% S
   Z0 <- matrix(rnorm(p_cov * d), p_cov, d)
   P  <- X0 %*% t(Y0)
