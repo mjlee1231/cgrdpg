@@ -40,19 +40,22 @@ procrustes_align <- function(X_est, X_target) {
   list(X_aligned = X_est %*% Q, Q = Q)
 }
 
-compute_ose_step <- function(A, X_init, clipping_val) {
+compute_ose_step <- function(A, X_init, S, clipping_val) {
   n_nodes <- nrow(A)
   d_dim   <- ncol(X_init)
   X_new   <- matrix(0, n_nodes, d_dim)
   for (i in 1:n_nodes) {
     x_i     <- X_init[i, ]
     idx_j   <- setdiff(1:n_nodes, i)
-    p_i     <- pmax(pmin(as.vector(X_init[idx_j, ] %*% x_i), 1 - clipping_val), clipping_val)
+    # GRDPG edge probability: p_ij = x_i^T S x_j
+    p_i     <- pmax(pmin(as.vector(X_init[idx_j, ] %*% (S %*% x_i)), 1 - clipping_val), clipping_val)
     resid   <- A[i, idx_j] - p_i
     w_score <- 1 / (p_i * (1 - p_i))
-    grad    <- colSums(X_init[idx_j, ] * (resid * w_score))
-    G       <- t(X_init[idx_j, ]) %*% (X_init[idx_j, ] * w_score)
-    X_new[i, ] <- x_i + solve(G + diag(1e-9, d_dim), grad)
+    # Gradient: ∂p_ij/∂x_i = S x_j, so gradient = Σ_j (A_ij - p_ij) S x_j / [p_ij(1-p_ij)]
+    grad    <- S %*% colSums(X_init[idx_j, ] * (resid * w_score))
+    # Fisher information: G = S [Σ_j x_j x_j^T / [p_ij(1-p_ij)]] S
+    G       <- S %*% (t(X_init[idx_j, ]) %*% (X_init[idx_j, ] * w_score)) %*% S
+    X_new[i, ] <- x_i - solve(G + diag(1e-9, d_dim), grad)
   }
   X_new
 }
@@ -145,7 +148,7 @@ cat(sprintf("Using %d cores for cgrdpg parallel fitting\n\n", ncores))
   # 5. OSE
   cat("Computing OSE...\n")
   t0        <- Sys.time()
-  X_ose_raw <- compute_ose_step(A, X_ase_raw, eps_clip)
+  X_ose_raw <- compute_ose_step(A, X_ase_raw, S, eps_clip)
   ose_time  <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
   X_ose     <- procrustes_align(X_ose_raw, X0)$X_aligned
   cat(sprintf("OSE: time=%.1fs\n", ose_time))
