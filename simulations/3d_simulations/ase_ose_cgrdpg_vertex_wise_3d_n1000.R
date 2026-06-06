@@ -127,23 +127,7 @@ cat(sprintf("Using %d cores for cgrdpg parallel fitting\n\n", ncores))
   A <- A * upper.tri(A, diag = FALSE) + t(A * upper.tri(A, diag = FALSE))
   B <- Z0 %*% t(X0) + matrix(rnorm(p_cov * n, sd = 1.0), p_cov, n)
 
-  # 3. cgrdpg
-  cat("Fitting cgrdpg...\n")
-  t0  <- Sys.time()
-  fit <- tryCatch(
-    fit_grdpg_cov_parallel(A, B, d = d, p = 2, q = 1,
-                           maxit = maxit, tol = tol, tau = tau, ncores = ncores),
-    error = function(e) fit_grdpg_cov(A, B, d = d, p = 2, q = 1,
-                                      maxit = maxit, tol = tol, tau = tau)
-  )
-  cgrdpg_time <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
-  X_cgrdpg    <- procrustes_align(fit$X, X0)$X_aligned
-  Y_cgrdpg    <- X_cgrdpg %*% S
-  Z_cgrdpg    <- B %*% X_cgrdpg %*% solve(t(X_cgrdpg) %*% X_cgrdpg)
-  cat(sprintf("cgrdpg: converged=%s, iters=%d, time=%.1fs\n",
-              fit$converged, fit$iters, cgrdpg_time))
-
-  # 4. ASE
+  # 3. ASE (computed first to get estimated signature matrix)
   cat("Computing ASE...\n")
   t0        <- Sys.time()
   A_aug     <- A; diag(A_aug) <- rowSums(A) / (n - 1)
@@ -154,6 +138,22 @@ cat(sprintf("Using %d cores for cgrdpg parallel fitting\n\n", ncores))
   ase_time  <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
   X_ase     <- procrustes_align(X_ase_unsigned, X0)$X_aligned
   cat(sprintf("ASE: time=%.1fs\n", ase_time))
+
+  # 4. cgrdpg
+  cat("Fitting cgrdpg...\n")
+  t0  <- Sys.time()
+  fit <- tryCatch(
+    fit_grdpg_cov_parallel(A, B, d = d, p = 2, q = 1,
+                           maxit = maxit, tol = tol, tau = tau, ncores = ncores),
+    error = function(e) fit_grdpg_cov(A, B, d = d, p = 2, q = 1,
+                                      maxit = maxit, tol = tol, tau = tau)
+  )
+  cgrdpg_time <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
+  X_cgrdpg    <- procrustes_align(fit$X, X0)$X_aligned
+  Y_cgrdpg    <- X_cgrdpg %*% S_estimated  # Use estimated signature
+  Z_cgrdpg    <- B %*% X_cgrdpg %*% solve(t(X_cgrdpg) %*% X_cgrdpg)
+  cat(sprintf("cgrdpg: converged=%s, iters=%d, time=%.1fs\n",
+              fit$converged, fit$iters, cgrdpg_time))
 
   # 5. OSE
   cat("Computing OSE...\n")
