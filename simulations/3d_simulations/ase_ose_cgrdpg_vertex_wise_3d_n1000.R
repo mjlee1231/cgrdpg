@@ -113,7 +113,7 @@ if (ncores <= 1) ncores <- max(1, parallel::detectCores() - 1)
 cat(sprintf("Using %d cores for cgrdpg parallel fitting\n\n", ncores))
 
   # 1. Latent positions
-  t <- (0:(n - 1)) / n
+  t <- (1:n) / n
   X0 <- cbind(0.15 * sin(2*pi*t) + 0.6,
               0.15 * cos(2*pi*t) + 0.6,
               0.15 * cos(4*pi*t))
