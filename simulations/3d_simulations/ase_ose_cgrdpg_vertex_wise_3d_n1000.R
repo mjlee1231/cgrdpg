@@ -150,6 +150,7 @@ cat(sprintf("Using %d cores for cgrdpg parallel fitting\n\n", ncores))
   ase_fit   <- ase_grdpg(A_aug, d = d)
   X_ase_unsigned <- ase_fit$X         # U |Λ|^{1/2}
   X_ase_signed   <- ase_fit$X_signed  # U |Λ|^{1/2} sign(Λ)
+  S_estimated    <- ase_fit$sign_diag # Signature from actual eigenvalues
   ase_time  <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
   X_ase     <- procrustes_align(X_ase_unsigned, X0)$X_aligned
   cat(sprintf("ASE: time=%.1fs\n", ase_time))
@@ -196,7 +197,7 @@ cat(sprintf("Using %d cores for cgrdpg parallel fitting\n\n", ncores))
     results_mat[i, "ose_true"]   <- check_coverage(
       X_ose[i,] - X0[i,], compute_prec_ose(i, X0, Y0, eps_clip))
     results_mat[i, "ose_plugin"] <- check_coverage(
-      X_ose[i,] - X0[i,], compute_prec_ose(i, X_ose, X_ose %*% S, eps_clip))
+      X_ose[i,] - X0[i,], compute_prec_ose(i, X_ose, X_ose %*% S_estimated, eps_clip))
   }
 
   cov_time    <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
