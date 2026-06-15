@@ -159,9 +159,10 @@ cat(sprintf("Using %d cores for cgrdpg parallel fitting\n\n", ncores))
   cat("Computing OSE...\n")
   t0        <- Sys.time()
   X_ose_raw <- compute_ose_step(A, X_ase_unsigned, X_ase_signed, eps_clip)
-  ose_time  <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
+  ose_step_time  <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
+  ose_time  <- ase_time + ose_step_time  # OSE includes ASE time
   X_ose     <- procrustes_align(X_ose_raw, X0)$X_aligned
-  cat(sprintf("OSE: time=%.1fs\n", ose_time))
+  cat(sprintf("OSE: time=%.1fs (ASE: %.1fs + step: %.1fs)\n", ose_time, ase_time, ose_step_time))
 
   sse <- c(cgrdpg = sum((X_cgrdpg - X0)^2),
            ase    = sum((X_ase    - X0)^2),
