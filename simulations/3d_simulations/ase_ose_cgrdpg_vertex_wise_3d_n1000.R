@@ -44,7 +44,7 @@ compute_ose_step <- function(A, X_unsigned, X_signed, clipping_val) {
   # OSE for GRDPG
   # Edge prob: p_ji = x̃_j^T * x̂_i (signed × unsigned)
   # Gradient & Fisher info use signed ASE
-  # Update: x_new = x_unsigned + G^{-1} * grad (PLUS sign)
+  # Update: x_new = x_unsigned + G^{-1} * grad 
   n_nodes <- nrow(A)
   d_dim   <- ncol(X_unsigned)
   X_new   <- matrix(0, n_nodes, d_dim)
@@ -191,7 +191,7 @@ cat(sprintf("Using %d cores for cgrdpg parallel fitting\n\n", ncores))
     results_mat[i, "ase_true"]   <- check_coverage(
       X_ase[i,] - X0[i,], compute_prec_ase(i, X0,    S, eps_clip))
     results_mat[i, "ase_plugin"] <- check_coverage(
-      X_ase[i,] - X0[i,], compute_prec_ase(i, X_ase, S, eps_clip))
+      X_ase[i,] - X0[i,], compute_prec_ase(i, X_ase, S_estimated, eps_clip))
 
     # OSE (use unsigned and signed versions)
     results_mat[i, "ose_true"]   <- check_coverage(
