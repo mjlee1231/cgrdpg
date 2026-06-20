@@ -5,7 +5,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
-#SBATCH --mem=256G
+#SBATCH --mem=192G
 #SBATCH --time=24:00:00
 #SBATCH --array=1-100
 #SBATCH --output=logs_n2000/rep%03a_%j.out
@@ -29,7 +29,7 @@ echo "Array Task ID: $SLURM_ARRAY_TASK_ID"
 echo "Methods: cgrdpg-TRUE/PLUGIN, ASE-TRUE/PLUGIN, OSE-TRUE/PLUGIN"
 echo "Replication: $SLURM_ARRAY_TASK_ID/100"
 echo "n=2000, p_cov=1000"
-echo "Resources: 32 CPUs, 256GB RAM"
+echo "Resources: 32 CPUs, 192GB RAM"
 echo "========================================"
 
 cd $SLURM_SUBMIT_DIR
