@@ -45,14 +45,16 @@ compute_ose_step <- function(A, X_init, clipping_val) {
   d_dim   <- ncol(X_init)
   X_new   <- matrix(0, n_nodes, d_dim)
   for (i in 1:n_nodes) {
-    x_i <- X_init[i, ]
     idx_j <- setdiff(1:n_nodes, i)
-    p_i <- pmax(pmin(as.vector(X_init[idx_j, ] %*% x_i), 1 - clipping_val), clipping_val)
+    # Ensure matrix dimensions are preserved for d=1
+    X_i_mat <- matrix(X_init[i, ], ncol = 1)  # d x 1
+    X_j_mat <- X_init[idx_j, , drop = FALSE]  # (n-1) x d
+    p_i <- pmax(pmin(as.vector(X_j_mat %*% X_i_mat), 1 - clipping_val), clipping_val)
     resid <- A[i, idx_j] - p_i
     w_score <- 1 / (p_i * (1 - p_i))
-    grad <- colSums(X_init[idx_j, ] * (resid * w_score))
-    G <- t(X_init[idx_j, ]) %*% (X_init[idx_j, ] * w_score)
-    X_new[i, ] <- x_i + solve(G + diag(1e-9, d_dim), grad)
+    grad <- colSums(X_j_mat * (resid * w_score))
+    G <- t(X_j_mat) %*% (X_j_mat * w_score)
+    X_new[i, ] <- X_init[i, ] + solve(G + diag(1e-9, d_dim), grad)
   }
   X_new
 }
