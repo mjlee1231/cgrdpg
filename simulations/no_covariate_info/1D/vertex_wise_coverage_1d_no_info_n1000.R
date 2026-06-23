@@ -1,219 +1,368 @@
 #!/usr/bin/env Rscript
-# Vertex-wise Coverage: cgrdpg vs ASE vs OSE with NO COVARIATE INFORMATION
-# Scenario: Z0 = 0, B contains only noise (no signal)
-# This tests cgrdpg performance when covariates are uninformative
-# n=1000, p_cov=500, d=1 (1D RDPG)
+# 1D No Covariate Info: cgrdpg vs ASE vs OSE (SINGLE REPLICATION)
+# Scenario: Z0 = 0, B = pure noise (no signal)
+# Latent position: X_i = 0.75 * sin(π * i/(n-1)) + 0.1
+# n=1000, p_cov=500
+
+args <- commandArgs(trailingOnly = TRUE)
+if (length(args) != 1) {
+  stop("Usage: Rscript vertex_wise_coverage_1d_no_info_n1000.R <rep_id>")
+}
+
+rep_id <- as.integer(args[1])
+if (is.na(rep_id) || rep_id < 1 || rep_id > 100) {
+  stop("rep_id must be between 1 and 100")
+}
 
 library(cgrdpg)
 
-# --- Parameters ---
-args <- commandArgs(trailingOnly = TRUE)
-if (length(args) == 0) stop("Usage: Rscript vertex_wise_coverage_1d_no_info_n1000.R <rep_number>")
-rep_id <- as.integer(args[1])
-if (is.na(rep_id) || rep_id < 1 || rep_id > 100) stop("Rep number must be between 1 and 100")
-
-n         <- 1000
-p_cov     <- 500
-d         <- 1
-maxit     <- 30
-tol       <- 0.01
-tau       <- 0.005
-eps_clip  <- 1e-10
-chi2_crit <- qchisq(0.95, df = d)
-S         <- diag(1)  # 1D RDPG (positive definite)
-
-output_dir <- "results_1d_no_info_n1000"
-if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
-
 cat("============================================================================\n")
-cat("  Vertex-wise Coverage: 1D NO COVARIATE INFORMATION (n=1000)\n")
-cat(sprintf("  Replication %d/100\n", rep_id))
+cat(sprintf("  1D NO COVARIATE INFO - REPLICATION %d/100\n", rep_id))
 cat("  Z0 = 0, B = pure noise\n")
-cat("  Methods: cgrdpg, ASE, OSE\n")
+cat("  Comparing: cgrdpg vs ASE vs OSE\n")
 cat("============================================================================\n\n")
 
-# --- Helpers ---
+# Fixed parameters
+n <- 1000
+p_cov <- 500
+d <- 1
+maxit <- 30
+tol <- 0.01
+base_seed <- 598
+eps_clip <- 1e-10
+tau <- 0.005
 
-procrustes_align <- function(X_est, X_target) {
-  svd_res <- svd(t(X_est) %*% X_target)
-  Q <- svd_res$u %*% t(svd_res$v)
-  list(X_aligned = X_est %*% Q, Q = Q)
-}
+# Set seed for this replication
+set.seed(base_seed + rep_id)
 
-compute_ose_step <- function(A, X_init, clipping_val) {
-  n_nodes <- nrow(A)
-  d_dim   <- ncol(X_init)
-  X_new   <- matrix(0, n_nodes, d_dim)
-  for (i in 1:n_nodes) {
-    idx_j <- setdiff(1:n_nodes, i)
-    # Ensure matrix dimensions are preserved for d=1
-    X_i_mat <- matrix(X_init[i, ], ncol = 1)  # d x 1
-    X_j_mat <- X_init[idx_j, , drop = FALSE]  # (n-1) x d
-    p_i <- pmax(pmin(as.vector(X_j_mat %*% X_i_mat), 1 - clipping_val), clipping_val)
-    resid <- A[i, idx_j] - p_i
-    w_score <- 1 / (p_i * (1 - p_i))
-    grad <- colSums(X_j_mat * (resid * w_score))
-    G <- t(X_j_mat) %*% (X_j_mat * w_score)
-    X_new[i, ] <- X_init[i, ] + solve(G + diag(1e-9, d_dim), grad)
+# Helper functions
+compute_G_in_true <- function(i, X0, Y0, Z0, tau) {
+  n <- nrow(X0)
+  p_cov <- nrow(Z0)
+  d <- ncol(X0)
+
+  s <- as.vector(X0[i, ] %*% t(Y0))
+  w <- dpsi(s, tau = tau)
+
+  G_net <- matrix(0, d, d)
+  for (j in 1:n) {
+    G_net <- G_net + w[j] * outer(Y0[j, ], Y0[j, ])
   }
-  X_new
+
+  G_cov <- crossprod(Z0)
+  G_in <- (G_net + G_cov) / (n + p_cov)
+
+  return(G_in)
 }
 
-compute_G_in_cgrdpg <- function(i, X_mat, Y_mat, Z_mat, tau) {
-  n_loc <- nrow(X_mat); p_loc <- nrow(Z_mat)
-  s <- as.vector(X_mat[i, ] %*% t(Y_mat))
-  w <- dpsi(s, tau = tau); w[i] <- 0
-  G_net <- crossprod(Y_mat * sqrt(w))
-  (G_net + crossprod(Z_mat)) / (n_loc + p_loc)
+compute_G_in_plugin <- function(i, X_est, Y_est, Z_est, tau) {
+  n <- nrow(X_est)
+  p_cov <- nrow(Z_est)
+  d <- ncol(X_est)
+
+  s <- as.vector(X_est[i, ] %*% t(Y_est))
+  w <- dpsi(s, tau = tau)
+
+  G_net <- matrix(0, d, d)
+  for (j in 1:n) {
+    G_net <- G_net + w[j] * outer(Y_est[j, ], Y_est[j, ])
+  }
+
+  G_cov <- crossprod(Z_est)
+  G_in <- (G_net + G_cov) / (n + p_cov)
+
+  return(G_in)
 }
 
-compute_prec_ase <- function(i, X_mat, S, clipping_val) {
-  idx_j  <- setdiff(1:nrow(X_mat), i)
-  p_vals <- pmax(pmin(as.vector(X_mat[idx_j, ] %*% (S %*% X_mat[i, ])), 1 - clipping_val), clipping_val)
-  Delta  <- t(X_mat) %*% X_mat
-  M_mat  <- t(X_mat[idx_j, ]) %*% (X_mat[idx_j, ] * p_vals * (1 - p_vals))
-  S %*% Delta %*% solve(M_mat + diag(1e-9, d), Delta) %*% S
+get_precisions_ase_ose_1d <- function(i, X_target, eps_clip) {
+  n <- length(X_target)
+  idx_j <- setdiff(1:n, i)
+
+  p_vals <- X_target * X_target[i]
+  p_vals <- pmax(pmin(p_vals, 1 - eps_clip), eps_clip)
+
+  # OSE Precision (Fisher Information)
+  w_ose <- 1 / (p_vals[idx_j] * (1 - p_vals[idx_j]))
+  prec_ose <- sum(X_target[idx_j]^2 * w_ose)
+
+  # ASE Precision (Sandwich form)
+  Delta <- sum(X_target^2)
+  w_ase <- p_vals[idx_j] * (1 - p_vals[idx_j])
+  M_mat <- sum(X_target[idx_j]^2 * w_ase)
+  prec_ase <- Delta^2 / (M_mat + 1e-9)
+
+  return(list(prec_ose = prec_ose, prec_ase = prec_ase))
 }
 
-compute_prec_ose <- function(i, X_mat, clipping_val) {
-  idx_j  <- setdiff(1:nrow(X_mat), i)
-  p_vals <- pmax(pmin(as.vector(X_mat[idx_j, ] %*% X_mat[i, ]), 1 - clipping_val), clipping_val)
-  w      <- 1 / (p_vals * (1 - p_vals))
-  t(X_mat[idx_j, ]) %*% (X_mat[idx_j, ] * w)
+ase_grdpg <- function(A, d) {
+  spec <- eigen(A, symmetric = TRUE)
+  X <- spec$vectors[, 1:d, drop = FALSE] %*% diag(sqrt(abs(spec$values[1:d])), nrow = d)
+  return(list(X = X))
 }
 
-check_coverage <- function(err, Prec, scale = 1.0) {
-  ev <- eigen(Prec, only.values = TRUE)$values
-  if (min(ev) < 1e-10) return(NA)
-  (scale * as.numeric(t(err) %*% Prec %*% err)) <= chi2_crit
+compute_ose_step_1d <- function(A, X_init, clipping_val) {
+  n_nodes <- nrow(A)
+  X_new <- matrix(0, n_nodes, 1)
+
+  for (i in 1:n_nodes) {
+    x_i <- X_init[i, 1]
+    indices_j <- setdiff(1:n_nodes, i)
+
+    p_i <- as.vector(X_init[indices_j, 1] * x_i)
+    p_i <- pmax(pmin(p_i, 1 - clipping_val), clipping_val)
+
+    resid <- A[i, indices_j] - p_i
+    weight_score <- 1 / (p_i * (1 - p_i))
+    grad <- sum(X_init[indices_j, 1] * (resid * weight_score))
+
+    G <- sum(X_init[indices_j, 1]^2 * weight_score)
+
+    step <- grad / (G + 1e-9)
+    X_new[i, 1] <- x_i + step
+  }
+  return(X_new)
 }
 
-# ============================================================================
-#  SINGLE REPLICATION
-# ============================================================================
-rep_start <- Sys.time()
-set.seed(598 + rep_id)
+# Generate latent positions
+cat(sprintf("Replication %d: Generating 1D latent positions...\n", rep_id))
+i_vals <- 0:(n-1)
+X0 <- matrix(0.75 * sin(pi * i_vals / (n - 1)) + 0.1, n, 1)
+
+# For d=1, standard RDPG
+S <- matrix(1, 1, 1)
+Y0 <- X0 %*% S
+
+# NO COVARIATE INFORMATION: Z0 = 0
+Z0 <- matrix(0, p_cov, d)
+
+P <- X0 %*% t(Y0)
+cat(sprintf("Edge probability range: [%.4f, %.4f]\n\n", min(P), max(P)))
+
+# Generate data
+cat("Generating A and B...\n")
+A <- (runif(n = n^2, min = 0, max = 1) < P) * 1.0
+A <- A * upper.tri(x = A, diag = FALSE) + t(A * upper.tri(x = A, diag = FALSE))
+
+# B contains ONLY NOISE (no signal from Z0 %*% t(X0))
+B <- matrix(rnorm(p_cov * n, sd = 1.0), p_cov, n)
+
+# ===== METHOD 1: cgrdpg (Fisher scoring) =====
+cat("Fitting cgrdpg model...\n")
+cgrdpg_start <- Sys.time()
 ncores <- as.integer(Sys.getenv("SLURM_CPUS_PER_TASK", "1"))
 if (ncores <= 1) ncores <- max(1, parallel::detectCores() - 1)
-cat(sprintf("Using %d cores for cgrdpg parallel fitting\n\n", ncores))
 
-  # 1. Latent positions (same as diagnostic_1d_n500_100reps.R)
-  i_vals <- 0:(n-1)
-  X0 <- matrix(0.75 * sin(pi * i_vals / (n - 1)) + 0.1, n, 1)
-  Y0 <- X0 %*% S
+fit <- tryCatch(
+  fit_grdpg_cov_parallel(A, B, d = d, p = 1, q = 0,
+                         maxit = maxit, tol = tol, tau = tau, ncores = ncores),
+  error = function(e) fit_grdpg_cov(A, B, d = d, p = 1, q = 0,
+                                     maxit = maxit, tol = tol, tau = tau)
+)
+cgrdpg_time <- as.numeric(difftime(Sys.time(), cgrdpg_start, units = "secs"))
 
-  # 2. NO COVARIATE INFORMATION: Z0 = 0
-  Z0 <- matrix(0, p_cov, d)  # Zero signal matrix
+# Procrustes for cgrdpg
+X_cgrdpg_raw <- fit$X
+M_cgrdpg <- t(X_cgrdpg_raw) %*% X0
+svd_cgrdpg <- svd(M_cgrdpg)
+Q_cgrdpg <- svd_cgrdpg$u %*% t(svd_cgrdpg$v)
+X_cgrdpg <- X_cgrdpg_raw %*% Q_cgrdpg
+Y_cgrdpg <- X_cgrdpg %*% S
+Z_cgrdpg <- fit$Z
 
-  P  <- X0 %*% t(Y0)
-  cat(sprintf("Edge probability range: [%.4f, %.4f]\n\n", min(P), max(P)))
+sse_cgrdpg <- sum((X_cgrdpg - X0)^2)
+cat(sprintf("cgrdpg: converged=%s, iters=%d, time=%.1fs, SSE=%.4f\n",
+            fit$converged, fit$iters, cgrdpg_time, sse_cgrdpg))
 
-  # 3. Data
-  A <- (runif(n^2) < P) * 1.0
-  A <- A * upper.tri(A, diag = FALSE) + t(A * upper.tri(A, diag = FALSE))
+# ===== METHOD 2: ASE =====
+cat("Computing ASE...\n")
+ase_start <- Sys.time()
+A_aug <- A
+diag(A_aug) <- rowSums(A) / (n - 1)
+ase_res <- ase_grdpg(A_aug, d = d)
+X_ase_raw <- ase_res$X
+ase_time <- as.numeric(difftime(Sys.time(), ase_start, units = "secs"))
 
-  # B contains ONLY NOISE (no signal from Z0 %*% t(X0))
-  B <- matrix(rnorm(p_cov * n, sd = 1.0), p_cov, n)
+# Procrustes for ASE
+M_ase <- t(X_ase_raw) %*% X0
+svd_ase <- svd(M_ase)
+Q_ase <- svd_ase$u %*% t(svd_ase$v)
+X_ase <- X_ase_raw %*% Q_ase
 
-  # 4. ASE
-  cat("Computing ASE...\n")
-  t0        <- Sys.time()
-  A_aug     <- A; diag(A_aug) <- rowSums(A) / (n - 1)
-  ase_fit   <- ase_grdpg(A_aug, d = d)
-  X_ase_raw <- ase_fit$X
-  ase_time  <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
-  X_ase     <- procrustes_align(X_ase_raw, X0)$X_aligned
-  cat(sprintf("ASE: time=%.1fs\n", ase_time))
+sse_ase <- sum((X_ase - X0)^2)
+cat(sprintf("ASE: time=%.1fs, SSE=%.4f\n", ase_time, sse_ase))
 
-  # 5. cgrdpg
-  cat("Fitting cgrdpg...\n")
-  t0  <- Sys.time()
-  fit <- tryCatch(
-    fit_grdpg_cov_parallel(A, B, d = d, p = 1, q = 0,
-                           maxit = maxit, tol = tol, tau = tau, ncores = ncores),
-    error = function(e) fit_grdpg_cov(A, B, d = d, p = 1, q = 0,
-                                      maxit = maxit, tol = tol, tau = tau)
-  )
-  cgrdpg_time <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
-  X_cgrdpg    <- procrustes_align(fit$X, X0)$X_aligned
-  Y_cgrdpg    <- X_cgrdpg %*% S
-  # Z_cgrdpg from regression (even though true Z0=0, we estimate it)
-  Z_cgrdpg    <- B %*% X_cgrdpg %*% solve(t(X_cgrdpg) %*% X_cgrdpg)
-  cat(sprintf("cgrdpg: converged=%s, iters=%d, time=%.1fs\n",
-              fit$converged, fit$iters, cgrdpg_time))
+# ===== METHOD 3: OSE =====
+cat("Computing OSE...\n")
+ose_step_start <- Sys.time()
+X_ose_raw <- compute_ose_step_1d(A, X_ase_raw, clipping_val = eps_clip)
+ose_step_time <- as.numeric(difftime(Sys.time(), ose_step_start, units = "secs"))
+ose_time <- ase_time + ose_step_time
 
-  # 6. OSE
-  cat("Computing OSE...\n")
-  t0        <- Sys.time()
-  X_ose_raw <- compute_ose_step(A, X_ase_raw, eps_clip)
-  ose_step_time  <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
-  ose_time  <- ase_time + ose_step_time
-  X_ose     <- procrustes_align(X_ose_raw, X0)$X_aligned
-  cat(sprintf("OSE: time=%.1fs (ASE: %.1fs + step: %.1fs)\n", ose_time, ase_time, ose_step_time))
+# Procrustes for OSE
+M_ose <- t(X_ose_raw) %*% X0
+svd_ose <- svd(M_ose)
+Q_ose <- svd_ose$u %*% t(svd_ose$v)
+X_ose <- X_ose_raw %*% Q_ose
 
-  sse <- c(cgrdpg = sum((X_cgrdpg - X0)^2),
-           ase    = sum((X_ase    - X0)^2),
-           ose    = sum((X_ose    - X0)^2))
-  cat(sprintf("SSE  cgrdpg=%.4f  ASE=%.4f  OSE=%.4f\n\n", sse["cgrdpg"], sse["ase"], sse["ose"]))
+sse_ose <- sum((X_ose - X0)^2)
+cat(sprintf("OSE: time=%.1fs (ASE: %.1fs + step: %.1fs), SSE=%.4f\n\n",
+            ose_time, ase_time, ose_step_time, sse_ose))
 
-  # 7. Vertex-wise coverage
-  cat(sprintf("Computing vertex-wise coverage for all %d vertices...\n", n))
-  results_mat <- matrix(NA_real_, nrow = n, ncol = 6,
-    dimnames = list(NULL, c("cgrdpg_true", "cgrdpg_plugin",
-                             "ase_true",    "ase_plugin",
-                             "ose_true",    "ose_plugin")))
+# ===== COVERAGE COMPUTATION =====
+cat("Computing vertex-wise coverage...\n")
+coverage_start <- Sys.time()
+chi2_crit <- qchisq(0.95, df = d)
 
-  t0 <- Sys.time()
-  for (i in 1:n) {
-    if (i %% 200 == 0) cat(sprintf("  Vertex %d/%d\n", i, n))
+# cgrdpg coverage (TRUE and PLUGIN)
+cgrdpg_true <- logical(n)
+cgrdpg_plugin <- logical(n)
 
-    # cgrdpg
-    results_mat[i, "cgrdpg_true"]   <- check_coverage(
-      X0[i,] - X_cgrdpg[i,],
-      compute_G_in_cgrdpg(i, X0,       Y0,       Z0,       tau), n + p_cov)
-    results_mat[i, "cgrdpg_plugin"] <- check_coverage(
-      X0[i,] - X_cgrdpg[i,],
-      compute_G_in_cgrdpg(i, X_cgrdpg, Y_cgrdpg, Z_cgrdpg, tau), n + p_cov)
+for (i in 1:n) {
+  if (i %% 200 == 0) cat(sprintf("  Vertex %d/%d\n", i, n))
 
-    # ASE
-    results_mat[i, "ase_true"]   <- check_coverage(
-      X_ase[i,] - X0[i,], compute_prec_ase(i, X0,    S, eps_clip))
-    results_mat[i, "ase_plugin"] <- check_coverage(
-      X_ase[i,] - X0[i,], compute_prec_ase(i, X_ase, S, eps_clip))
-
-    # OSE
-    results_mat[i, "ose_true"]   <- check_coverage(
-      X_ose[i,] - X0[i,], compute_prec_ose(i, X0,   eps_clip))
-    results_mat[i, "ose_plugin"] <- check_coverage(
-      X_ose[i,] - X0[i,], compute_prec_ose(i, X_ose, eps_clip))
+  # cgrdpg TRUE
+  G_true <- compute_G_in_true(i, X0, Y0, Z0, tau)
+  if (G_true[1,1] > 1e-10) {
+    diff <- X0[i, 1] - X_cgrdpg[i, 1]
+    mahal <- (n + p_cov) * diff^2 * G_true[1,1]
+    cgrdpg_true[i] <- (mahal <= chi2_crit)
+  } else {
+    cgrdpg_true[i] <- NA
   }
 
-  cov_time    <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
-  overall_cov <- colMeans(results_mat, na.rm = TRUE)
-  rep_time    <- as.numeric(difftime(Sys.time(), rep_start, units = "mins"))
+  # cgrdpg PLUGIN
+  G_plug <- compute_G_in_plugin(i, X_cgrdpg, Y_cgrdpg, Z_cgrdpg, tau)
+  if (G_plug[1,1] > 1e-10) {
+    mahal <- (n + p_cov) * diff^2 * G_plug[1,1]
+    cgrdpg_plugin[i] <- (mahal <= chi2_crit)
+  } else {
+    cgrdpg_plugin[i] <- NA
+  }
+}
 
-  cat("\nOverall coverage (this rep):\n")
-  for (nm in names(overall_cov))
-    cat(sprintf("  %-20s %.1f%%  (NAs: %d)\n", nm, 100 * overall_cov[nm],
-                sum(is.na(results_mat[, nm]))))
-  cat(sprintf("\nTotal rep time: %.2f min\n", rep_time))
+# ASE coverage (TRUE and PLUGIN)
+ase_true <- logical(n)
+ase_plugin <- logical(n)
 
-  # 8. Save
-  out_file <- file.path(output_dir, sprintf("rep_%03d.rds", rep_id))
-  saveRDS(list(
-    rep_id      = rep_id,
-    seed        = 598 + rep_id,
-    n = n, p_cov = p_cov, d = d, tau = tau, S = S,
-    results_mat = results_mat,
-    overall_cov = overall_cov,
-    n_na        = colSums(is.na(results_mat)),
-    sse         = sse,
-    timing      = list(cgrdpg_time = cgrdpg_time, ase_time = ase_time,
-                       ose_time = ose_time, cov_time = cov_time,
-                       rep_time_min = rep_time),
-    converged  = fit$converged,
-    iterations = fit$iters
-  ), out_file)
+for (i in 1:n) {
+  prec_true <- get_precisions_ase_ose_1d(i, X0[,1], eps_clip)
+  prec_plug <- get_precisions_ase_ose_1d(i, X_ase[,1], eps_clip)
 
-cat(sprintf("\nResults saved to: %s\n", out_file))
+  diff <- X0[i, 1] - X_ase[i, 1]
+
+  if (prec_true$prec_ase > 1e-10) {
+    mahal_true <- diff^2 * prec_true$prec_ase
+    ase_true[i] <- (mahal_true <= chi2_crit)
+  } else {
+    ase_true[i] <- NA
+  }
+
+  if (prec_plug$prec_ase > 1e-10) {
+    mahal_plug <- diff^2 * prec_plug$prec_ase
+    ase_plugin[i] <- (mahal_plug <= chi2_crit)
+  } else {
+    ase_plugin[i] <- NA
+  }
+}
+
+# OSE coverage (TRUE and PLUGIN)
+ose_true <- logical(n)
+ose_plugin <- logical(n)
+
+for (i in 1:n) {
+  prec_true <- get_precisions_ase_ose_1d(i, X0[,1], eps_clip)
+  prec_plug <- get_precisions_ase_ose_1d(i, X_ose[,1], eps_clip)
+
+  diff <- X0[i, 1] - X_ose[i, 1]
+
+  if (prec_true$prec_ose > 1e-10) {
+    mahal_true <- diff^2 * prec_true$prec_ose
+    ose_true[i] <- (mahal_true <= chi2_crit)
+  } else {
+    ose_true[i] <- NA
+  }
+
+  if (prec_plug$prec_ose > 1e-10) {
+    mahal_plug <- diff^2 * prec_plug$prec_ose
+    ose_plugin[i] <- (mahal_plug <= chi2_crit)
+  } else {
+    ose_plugin[i] <- NA
+  }
+}
+
+coverage_time <- as.numeric(difftime(Sys.time(), coverage_start, units = "secs"))
+
+# Compile results
+result <- list(
+  rep_id = rep_id,
+  seed = base_seed + rep_id,
+  n = n,
+  p_cov = p_cov,
+  d = d,
+  tau = tau,
+  S = S,
+  sse = list(
+    cgrdpg = sse_cgrdpg,
+    ase = sse_ase,
+    ose = sse_ose
+  ),
+  coverage = list(
+    cgrdpg_true = cgrdpg_true,
+    cgrdpg_plugin = cgrdpg_plugin,
+    ase_true = ase_true,
+    ase_plugin = ase_plugin,
+    ose_true = ose_true,
+    ose_plugin = ose_plugin
+  ),
+  overall_cov = c(
+    cgrdpg_true = mean(cgrdpg_true, na.rm = TRUE),
+    cgrdpg_plugin = mean(cgrdpg_plugin, na.rm = TRUE),
+    ase_true = mean(ase_true, na.rm = TRUE),
+    ase_plugin = mean(ase_plugin, na.rm = TRUE),
+    ose_true = mean(ose_true, na.rm = TRUE),
+    ose_plugin = mean(ose_plugin, na.rm = TRUE)
+  ),
+  n_na = c(
+    cgrdpg_true = sum(is.na(cgrdpg_true)),
+    cgrdpg_plugin = sum(is.na(cgrdpg_plugin)),
+    ase_true = sum(is.na(ase_true)),
+    ase_plugin = sum(is.na(ase_plugin)),
+    ose_true = sum(is.na(ose_true)),
+    ose_plugin = sum(is.na(ose_plugin))
+  ),
+  timing = list(
+    cgrdpg_time = cgrdpg_time,
+    ase_time = ase_time,
+    ose_time = ose_time,
+    coverage_time = coverage_time,
+    rep_time_min = as.numeric(difftime(Sys.time(), cgrdpg_start, units = "mins"))
+  ),
+  converged = fit$converged,
+  iterations = fit$iters
+)
+
+# Save result
+output_dir <- "results_1d_no_info_n1000"
+if (!dir.exists(output_dir)) {
+  dir.create(output_dir, recursive = TRUE)
+}
+
+output_file <- file.path(output_dir, sprintf("rep_%03d.rds", rep_id))
+saveRDS(result, output_file)
+
+cat("\n============================================================================\n")
+cat(sprintf("  REPLICATION %d COMPLETE\n", rep_id))
+cat("============================================================================\n")
+cat(sprintf("SSE:     cgrdpg=%.4f, ASE=%.4f, OSE=%.4f\n", sse_cgrdpg, sse_ase, sse_ose))
+cat(sprintf("Coverage (TRUE):   cgrdpg=%.1f%%, ASE=%.1f%%, OSE=%.1f%%\n",
+            100*mean(cgrdpg_true, na.rm=TRUE),
+            100*mean(ase_true, na.rm=TRUE),
+            100*mean(ose_true, na.rm=TRUE)))
+cat(sprintf("Coverage (PLUGIN): cgrdpg=%.1f%%, ASE=%.1f%%, OSE=%.1f%%\n",
+            100*mean(cgrdpg_plugin, na.rm=TRUE),
+            100*mean(ase_plugin, na.rm=TRUE),
+            100*mean(ose_plugin, na.rm=TRUE)))
+cat(sprintf("Timing: cgrdpg=%.1fs, ASE=%.1fs, OSE=%.1fs, Coverage=%.1fs\n",
+            cgrdpg_time, ase_time, ose_time, coverage_time))
+cat(sprintf("Result saved to: %s\n", output_file))
 cat("============================================================================\n")
