@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-# Aggregate vertex-wise coverage results: 1D NO COVARIATE INFORMATION, n=1000
+# Aggregate vertex-wise coverage results: 1D NO COVARIATE INFORMATION, n=500
 # Z0 = 0, B = pure noise
 
 library(ggplot2)
@@ -7,16 +7,16 @@ library(dplyr)
 library(tidyr)
 
 cat("============================================================================\n")
-cat("  AGGREGATING: 1D NO COVARIATE INFORMATION (n=1000)\n")
+cat("  AGGREGATING: 1D NO COVARIATE INFORMATION (n=500)\n")
 cat("  Z0 = 0, B = pure noise\n")
 cat("  Methods: cgrdpg-TRUE, cgrdpg-PLUGIN, ASE-TRUE, ASE-PLUGIN, OSE-TRUE, OSE-PLUGIN\n")
 cat("============================================================================\n\n")
 
-results_dir <- "results_1d_no_info_n1000"
+results_dir <- "results_1d_no_info_n500"
 if (!dir.exists(results_dir)) stop(sprintf("Directory '%s' not found!", results_dir))
 
 # Create output directory for aggregated results and plots
-output_dir <- "outputs_1d_no_info_n1000"
+output_dir <- "outputs_1d_no_info_n500"
 if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
 
 files  <- list.files(results_dir, pattern = "^rep_[0-9]+\\.rds$", full.names = TRUE)
@@ -101,8 +101,8 @@ aggregated <- list(
   sse_all      = sapply(all_results, function(x) unlist(x$sse)),
   convergence  = conv
 )
-saveRDS(aggregated, file.path(output_dir, "aggregated_1d_no_info_n1000.rds"))
-cat(sprintf("Aggregated results saved to: %s/aggregated_1d_no_info_n1000.rds\n", output_dir))
+saveRDS(aggregated, file.path(output_dir, "aggregated_1d_no_info_n500.rds"))
+cat(sprintf("Aggregated results saved to: %s/aggregated_1d_no_info_n500.rds\n", output_dir))
 
 # --- Summary CSV ---
 summary_df <- data.frame(
@@ -112,8 +112,8 @@ summary_df <- data.frame(
   Min_Coverage   = 100 * apply(cov_matrix, 1, min),
   Max_Coverage   = 100 * apply(cov_matrix, 1, max)
 )
-write.csv(summary_df, file.path(output_dir, "summary_1d_no_info_n1000.csv"), row.names = FALSE)
-cat(sprintf("Summary saved to: %s/summary_1d_no_info_n1000.csv\n\n", output_dir))
+write.csv(summary_df, file.path(output_dir, "summary_1d_no_info_n500.csv"), row.names = FALSE)
+cat(sprintf("Summary saved to: %s/summary_1d_no_info_n500.csv\n\n", output_dir))
 
 # --- Plot 1: Boxplot of overall coverage per method ---
 cat("Creating plots...\n")
@@ -143,7 +143,7 @@ p1 <- ggplot(cov_long, aes(x = Method, y = Coverage, fill = Estimator)) +
   theme_minimal(base_size = 13) +
   theme(axis.text.x = element_text(angle = 30, hjust = 1))
 
-pdf(file.path(output_dir, "coverage_boxplot_1d_no_info_n1000.pdf"), width = 10, height = 6)
+pdf(file.path(output_dir, "coverage_boxplot_1d_no_info_n500.pdf"), width = 10, height = 6)
 print(p1)
 dev.off()
 
@@ -174,7 +174,7 @@ p2 <- ggplot(vertex_df, aes(x = Vertex, y = Coverage, color = Method)) +
   ) +
   theme_minimal(base_size = 13)
 
-pdf(file.path(output_dir, "vertex_coverage_1d_no_info_n1000.pdf"), width = 12, height = 6)
+pdf(file.path(output_dir, "vertex_coverage_1d_no_info_n500.pdf"), width = 12, height = 6)
 print(p2)
 dev.off()
 
@@ -192,14 +192,14 @@ p3 <- ggplot(cov_long, aes(x = Precision, y = Coverage, fill = Precision)) +
   theme_minimal(base_size = 13) +
   theme(legend.position = "none")
 
-pdf(file.path(output_dir, "true_vs_plugin_1d_no_info_n1000.pdf"), width = 10, height = 5)
+pdf(file.path(output_dir, "true_vs_plugin_1d_no_info_n500.pdf"), width = 10, height = 5)
 print(p3)
 dev.off()
 
 cat("Plots saved:\n")
-cat(sprintf("  - %s/coverage_boxplot_1d_no_info_n1000.pdf\n", output_dir))
-cat(sprintf("  - %s/vertex_coverage_1d_no_info_n1000.pdf\n", output_dir))
-cat(sprintf("  - %s/true_vs_plugin_1d_no_info_n1000.pdf\n", output_dir))
+cat(sprintf("  - %s/coverage_boxplot_1d_no_info_n500.pdf\n", output_dir))
+cat(sprintf("  - %s/vertex_coverage_1d_no_info_n500.pdf\n", output_dir))
+cat(sprintf("  - %s/true_vs_plugin_1d_no_info_n500.pdf\n", output_dir))
 cat("\n============================================================================\n")
 cat("AGGREGATION COMPLETE\n")
 cat("============================================================================\n")

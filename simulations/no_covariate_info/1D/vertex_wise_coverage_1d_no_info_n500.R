@@ -23,8 +23,8 @@ cat("  Comparing: cgrdpg vs ASE vs OSE\n")
 cat("============================================================================\n\n")
 
 # Fixed parameters
-n <- 1000
-p_cov <- 500
+n <- 500
+p_cov <- 250
 d <- 1
 maxit <- 30
 tol <- 0.01
@@ -342,7 +342,7 @@ result <- list(
 )
 
 # Save result
-output_dir <- "results_1d_no_info_n1000"
+output_dir <- "results_1d_no_info_n500"
 if (!dir.exists(output_dir)) {
   dir.create(output_dir, recursive = TRUE)
 }

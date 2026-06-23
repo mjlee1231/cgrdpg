@@ -8,21 +8,21 @@
 #SBATCH --mem=64G
 #SBATCH --time=12:00:00
 #SBATCH --array=1-100
-#SBATCH --output=logs_1d_no_info_n1000/rep%03a_%j.out
-#SBATCH --error=errors_1d_no_info_n1000/rep%03a_%j.err
+#SBATCH --output=logs_1d_no_info_n500/rep%03a_%j.out
+#SBATCH --error=errors_1d_no_info_n500/rep%03a_%j.err
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=mle6@iu.edu
 
 # 1D No Covariate Info: cgrdpg vs ASE vs OSE vertex-wise coverage
 # Z0 = 0, B = pure noise (no signal)
-# n=1000, 100 replications, p_cov=500, d=1 (RDPG)
+# n=500, 100 replications, p_cov=250, d=1 (RDPG)
 
 module load r/4.3.1
 
 # Create separate directories for results, logs, and errors
-mkdir -p results_1d_no_info_n1000
-mkdir -p logs_1d_no_info_n1000
-mkdir -p errors_1d_no_info_n1000
+mkdir -p results_1d_no_info_n500
+mkdir -p logs_1d_no_info_n500
+mkdir -p errors_1d_no_info_n500
 
 echo "========================================"
 echo "Job started at: $(date)"
@@ -39,7 +39,7 @@ cd $SLURM_SUBMIT_DIR
 
 START_TIME=$(date +%s)
 
-Rscript vertex_wise_coverage_1d_no_info_n1000.R $SLURM_ARRAY_TASK_ID
+Rscript vertex_wise_coverage_1d_no_info_n500.R $SLURM_ARRAY_TASK_ID
 
 END_TIME=$(date +%s)
 DURATION=$((END_TIME - START_TIME))
