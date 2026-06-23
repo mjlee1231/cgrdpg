@@ -24,13 +24,19 @@ cat("===========================================================================
 n <- 500
 p_cov <- 250
 d <- 1
-maxit <- 3
+maxit <- 30
 tol <- 0.01
+tau <- 0.005
 base_seed <- 598
-eps_clip <- 1e-3
+eps_clip <- 1e-10
 
 # Set seed for this replication
 set.seed(base_seed + rep_id)
+
+# Get number of cores
+ncores <- as.integer(Sys.getenv("SLURM_CPUS_PER_TASK", "1"))
+if (ncores <= 1) ncores <- max(1, parallel::detectCores() - 1)
+cat(sprintf("Using %d cores for parallel cgrdpg fitting\n\n", ncores))
 
 # Helper functions
 compute_G_in_true <- function(i, X0, Y0, Z0, tau) {
@@ -130,26 +136,29 @@ S <- matrix(1, 1, 1)
 Y0 <- X0 %*% S
 Z0 <- matrix(rnorm(p_cov * d), p_cov, d)
 
-# Compute tau
-P <- X0 %*% t(Y0)
-min_p <- min(P)
-max_p <- max(P)
-buffer <- 0.0001
-tau_auto <- min(min_p, 1 - max_p) - buffer
-tau <- min(1e-3, tau_auto)
-
 # Generate data
+P <- X0 %*% t(Y0)
+cat(sprintf("Edge probability range: [%.4f, %.4f]\n", min(P), max(P)))
 cat("Generating A and B...\n")
 A <- (runif(n = n^2, min = 0, max = 1) < P) * 1.0
 A <- A * upper.tri(x = A, diag = FALSE) + t(A * upper.tri(x = A, diag = FALSE))
 B <- Z0 %*% t(X0) + matrix(rnorm(p_cov * n, sd = 1.0), p_cov, n)
 
 # ===== METHOD 1: FISHER-SCORING =====
-cat("Fitting FISHER model...\n")
+cat("Fitting FISHER model with parallel...\n")
 fisher_start <- Sys.time()
-fit <- fit_grdpg_cov(A, B, d = d, p = 1, q = 0,
-                      maxit = maxit, tol = tol, tau = tau)
+fit <- tryCatch(
+  fit_grdpg_cov_parallel(A, B, d = d, p = 1, q = 0,
+                         maxit = maxit, tol = tol, tau = tau, ncores = ncores),
+  error = function(e) {
+    cat("Parallel failed, falling back to sequential...\n")
+    fit_grdpg_cov(A, B, d = d, p = 1, q = 0,
+                  maxit = maxit, tol = tol, tau = tau)
+  }
+)
 fisher_time <- as.numeric(difftime(Sys.time(), fisher_start, units = "secs"))
+cat(sprintf("FISHER: converged=%s, iters=%d, time=%.1fs\n",
+            fit$converged, fit$iters, fisher_time))
 
 # Procrustes for Fisher
 X_fisher_raw <- fit$X
@@ -281,6 +290,7 @@ result <- list(
   n = n,
   p_cov = p_cov,
   d = d,
+  tau = tau,
   sse = list(
     fisher = sse_fisher,
     ase = sse_ase,
@@ -299,7 +309,9 @@ result <- list(
     ase = ase_time,
     ose = ose_time,
     coverage = coverage_time
-  )
+  ),
+  converged = fit$converged,
+  iterations = fit$iters
 )
 
 # Save result
@@ -314,6 +326,7 @@ saveRDS(result, output_file)
 cat("\n============================================================================\n")
 cat(sprintf("  REPLICATION %d COMPLETE\n", rep_id))
 cat("============================================================================\n")
+cat(sprintf("Fisher: converged=%s, iterations=%d\n", fit$converged, fit$iters))
 cat(sprintf("SSE:     Fisher=%.4f, ASE=%.4f, OSE=%.4f\n", sse_fisher, sse_ase, sse_ose))
 cat(sprintf("Coverage (TRUE):   Fisher=%.1f%%, ASE=%.1f%%, OSE=%.1f%%\n",
             100*mean(fisher_true, na.rm=TRUE),
@@ -325,5 +338,6 @@ cat(sprintf("Coverage (PLUGIN): Fisher=%.1f%%, ASE=%.1f%%, OSE=%.1f%%\n",
             100*mean(ose_plugin, na.rm=TRUE)))
 cat(sprintf("Timing: Fisher=%.1fs, ASE=%.1fs, OSE=%.1fs, Coverage=%.1fs\n",
             fisher_time, ase_time, ose_time, coverage_time))
+cat(sprintf("Total time: %.2f min\n", (fisher_time + ase_time + ose_time + coverage_time)/60))
 cat(sprintf("Result saved to: %s\n", output_file))
 cat("============================================================================\n")
