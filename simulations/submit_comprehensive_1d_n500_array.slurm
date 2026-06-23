@@ -1,40 +1,44 @@
 #!/bin/bash
 #SBATCH --account=r00357
-#SBATCH --job-name=1d_n500
+#SBATCH --job-name=1d_comp_%a
 #SBATCH --partition=general
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=1
-#SBATCH --mem=16G
-#SBATCH --time=0:30:00
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=64G
+#SBATCH --time=01:00:00
 #SBATCH --array=1-100
-#SBATCH --output=1d_n500_array/rep_%03a_%j.out
-#SBATCH --error=1d_n500_array/rep_%03a_%j.err
+#SBATCH --output=logs_comprehensive_1d_n500/rep%03a_%j.out
+#SBATCH --error=errors_comprehensive_1d_n500/rep%03a_%j.err
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=mle6@iu.edu
 
 # ============================================================================
-# COMPREHENSIVE 1D SIMULATION ARRAY: FISHER vs ASE vs OSE (n=500)
+# COMPREHENSIVE 1D SIMULATION: FISHER vs ASE vs OSE (n=500, WITH COVARIATE SIGNAL)
 # ============================================================================
-# 100 parallel jobs, each running 1 replication
-# Each job: ~5 minutes
-# Total wall time: ~5 minutes (plus queue wait)
+# Z0 = rnorm (covariates contain signal)
+# 100 replications, maxit=30, 16 cores parallel
+# Comparing WITH signal vs no_covariate_info (NO signal)
 # ============================================================================
 
 # Load R module
 module load r/4.3.1
 
-# Create output directory if needed
-mkdir -p 1d_n500_array
+# Create separate directories for results, logs, and errors
+mkdir -p comprehensive_1d_n500_results
+mkdir -p logs_comprehensive_1d_n500
+mkdir -p errors_comprehensive_1d_n500
 
 # Print job information
 echo "========================================"
 echo "Job started at: $(date)"
-echo "Running on node: $(hostname)"
+echo "Node: $(hostname)"
 echo "Job ID: $SLURM_JOB_ID"
 echo "Array Task ID: $SLURM_ARRAY_TASK_ID"
-echo "Simulation: 1D Fisher vs ASE vs OSE"
+echo "Scenario: Z0 = rnorm (WITH covariate signal)"
+echo "Methods: FISHER-TRUE/PLUGIN, ASE-TRUE/PLUGIN, OSE-TRUE/PLUGIN"
 echo "Replication: $SLURM_ARRAY_TASK_ID/100"
+echo "Resources: 16 CPUs, 64GB RAM, maxit=30"
 echo "========================================"
 
 # Change to submission directory
