@@ -31,7 +31,7 @@ n     <- all_results[[1]]$n
 p_cov <- all_results[[1]]$p_cov
 d     <- all_results[[1]]$d
 tau   <- all_results[[1]]$tau
-methods <- colnames(all_results[[1]]$results_mat)
+methods <- names(all_results[[1]]$overall_cov)
 
 # --- Overall coverage per rep (6 x n_reps matrix) ---
 cov_matrix <- sapply(all_results, function(x) x$overall_cov)  # 6 x n_reps
@@ -58,14 +58,15 @@ for (m in methods) {
 cat("\nComputing vertex-wise coverage rates...\n")
 vertex_rates <- list()
 for (m in methods) {
-  mat <- sapply(all_results, function(x) x$results_mat[, m])  # n x n_reps
+  # Extract coverage vectors from each replication
+  mat <- sapply(all_results, function(x) x$coverage[[m]])  # n x n_reps
   vertex_rates[[m]] <- rowMeans(mat, na.rm = TRUE)
 }
 
 # --- SSE ---
 cat("\nSSE Statistics:\n")
 for (est in c("cgrdpg", "ase", "ose")) {
-  sse_vals <- sapply(all_results, function(x) x$sse[est])
+  sse_vals <- sapply(all_results, function(x) x$sse[[est]])
   cat(sprintf("  %-8s  Mean=%.4f  SD=%.4f\n", est, mean(sse_vals), sd(sse_vals)))
 }
 
@@ -74,7 +75,7 @@ cat("\nTiming (mean ± SD per replication):\n")
 cgrdpg_times <- sapply(all_results, function(x) x$timing$cgrdpg_time)
 ase_times    <- sapply(all_results, function(x) x$timing$ase_time)
 ose_times    <- sapply(all_results, function(x) x$timing$ose_time)
-cov_times    <- sapply(all_results, function(x) x$timing$cov_time)
+cov_times    <- sapply(all_results, function(x) x$timing$coverage_time)
 total_times  <- sapply(all_results, function(x) x$timing$rep_time_min)
 
 cat(sprintf("  cgrdpg fit:    %.1f ± %.1f sec\n", mean(cgrdpg_times), sd(cgrdpg_times)))
@@ -97,7 +98,7 @@ aggregated <- list(
   methods      = methods,
   cov_matrix   = cov_matrix,    # 6 x n_reps
   vertex_rates = vertex_rates,  # list of 6 vectors length n
-  sse_all      = sapply(all_results, function(x) x$sse),
+  sse_all      = sapply(all_results, function(x) unlist(x$sse)),
   convergence  = conv
 )
 saveRDS(aggregated, file.path(output_dir, "aggregated_1d_no_info_n1000.rds"))
