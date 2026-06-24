@@ -33,27 +33,6 @@ d     <- all_results[[1]]$d
 tau   <- all_results[[1]]$tau
 methods <- names(all_results[[1]]$overall_cov)
 
-# --- Overall coverage per rep (6 x n_reps matrix) ---
-cov_matrix <- sapply(all_results, function(x) x$overall_cov)  # 6 x n_reps
-rownames(cov_matrix) <- methods
-
-cat("============================================================================\n")
-cat("OVERALL COVERAGE STATISTICS\n")
-cat("============================================================================\n\n")
-cat(sprintf("n=%d, p_cov=%d, d=%d, tau=%.3f, reps=%d\n", n, p_cov, d, tau, n_reps))
-cat("Scenario: Z0 = 0 (no covariate information)\n\n")
-
-for (m in methods) {
-  vals <- cov_matrix[m, ]
-  cat(sprintf("%-20s  Mean=%5.2f%%  Median=%5.2f%%  SD=%.2f%%  [%.2f%%, %.2f%%]\n",
-              m,
-              100 * mean(vals),
-              100 * median(vals),
-              100 * sd(vals),
-              100 * min(vals),
-              100 * max(vals)))
-}
-
 # --- Vertex-wise coverage rates (n x n_reps per method) ---
 cat("\nComputing vertex-wise coverage rates...\n")
 vertex_rates <- list()
@@ -61,6 +40,28 @@ for (m in methods) {
   # Extract coverage vectors from each replication
   mat <- sapply(all_results, function(x) x$coverage[[m]])  # n x n_reps
   vertex_rates[[m]] <- rowMeans(mat, na.rm = TRUE)
+}
+
+# --- Per-rep overall coverage (for plotting only) ---
+cov_matrix <- sapply(all_results, function(x) x$overall_cov)  # 6 x n_reps
+rownames(cov_matrix) <- methods
+
+# --- Overall coverage statistics (statistics ACROSS vertices) ---
+cat("\n============================================================================\n")
+cat("OVERALL COVERAGE STATISTICS\n")
+cat("============================================================================\n\n")
+cat(sprintf("n=%d, p_cov=%d, d=%d, tau=%.3f, reps=%d\n", n, p_cov, d, tau, n_reps))
+cat("Scenario: Z0 = 0 (no covariate information)\n\n")
+
+for (m in methods) {
+  vals <- vertex_rates[[m]]  # Coverage rates across 100 reps for each of 500 vertices
+  cat(sprintf("%-20s  Mean=%5.2f%%  Median=%5.2f%%  SD=%.2f%%  [%.2f%%, %.2f%%]\n",
+              m,
+              100 * mean(vals, na.rm = TRUE),
+              100 * median(vals, na.rm = TRUE),
+              100 * sd(vals, na.rm = TRUE),
+              100 * min(vals, na.rm = TRUE),
+              100 * max(vals, na.rm = TRUE)))
 }
 
 # --- SSE ---
