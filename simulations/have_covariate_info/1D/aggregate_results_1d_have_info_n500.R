@@ -91,72 +91,54 @@ for (r in 1:n_reps) {
   iterations_vec[r] <- result$iterations
 }
 
-cat("\nComputing vertex-wise coverage...\n")
+cat("\nComputing vertex-wise coverage rates...\n")
 
-# Vertex-wise coverage (proportion of reps where vertex was covered)
-vertex_fisher_true <- rowMeans(fisher_true_matrix, na.rm = TRUE)
-vertex_fisher_plugin <- rowMeans(fisher_plugin_matrix, na.rm = TRUE)
-vertex_ase_true <- rowMeans(ase_true_matrix, na.rm = TRUE)
-vertex_ase_plugin <- rowMeans(ase_plugin_matrix, na.rm = TRUE)
-vertex_ose_true <- rowMeans(ose_true_matrix, na.rm = TRUE)
-vertex_ose_plugin <- rowMeans(ose_plugin_matrix, na.rm = TRUE)
+# --- Vertex-wise coverage rates (n vertices, each with coverage rate across 100 reps) ---
+vertex_rates <- list(
+  fisher_true = rowMeans(fisher_true_matrix, na.rm = TRUE),
+  fisher_plugin = rowMeans(fisher_plugin_matrix, na.rm = TRUE),
+  ase_true = rowMeans(ase_true_matrix, na.rm = TRUE),
+  ase_plugin = rowMeans(ase_plugin_matrix, na.rm = TRUE),
+  ose_true = rowMeans(ose_true_matrix, na.rm = TRUE),
+  ose_plugin = rowMeans(ose_plugin_matrix, na.rm = TRUE)
+)
 
-# Overall coverage (average across all vertices and reps)
-overall_fisher_true <- mean(fisher_true_matrix, na.rm = TRUE)
-overall_fisher_plugin <- mean(fisher_plugin_matrix, na.rm = TRUE)
-overall_ase_true <- mean(ase_true_matrix, na.rm = TRUE)
-overall_ase_plugin <- mean(ase_plugin_matrix, na.rm = TRUE)
-overall_ose_true <- mean(ose_true_matrix, na.rm = TRUE)
-overall_ose_plugin <- mean(ose_plugin_matrix, na.rm = TRUE)
+methods <- names(vertex_rates)
 
-# Print results
+# --- Overall coverage statistics (statistics ACROSS vertices) ---
 cat("\n============================================================================\n")
-cat("  OVERALL COVERAGE RESULTS (n=500, 100 replications)\n")
+cat("OVERALL COVERAGE STATISTICS\n")
 cat("============================================================================\n\n")
+cat(sprintf("n=%d, p_cov=%d, d=%d, tau=%.3f, reps=%d\n", n, p_cov, d, tau, n_reps))
+cat("Scenario: Z0 = rnorm (WITH covariate information)\n\n")
 
-cat("FISHER-SCORING (with covariates):\n")
-cat(sprintf("  TRUE precision:   %.2f%%\n", 100 * overall_fisher_true))
-cat(sprintf("  PLUGIN precision: %.2f%%\n\n", 100 * overall_fisher_plugin))
+for (m in methods) {
+  vals <- vertex_rates[[m]]  # Coverage rates across 100 reps for each of 500 vertices
+  cat(sprintf("%-20s  Mean=%5.2f%%  Median=%5.2f%%  SD=%.2f%%  [%.2f%%, %.2f%%]\n",
+              m,
+              100 * mean(vals, na.rm = TRUE),
+              100 * median(vals, na.rm = TRUE),
+              100 * sd(vals, na.rm = TRUE),
+              100 * min(vals, na.rm = TRUE),
+              100 * max(vals, na.rm = TRUE)))
+}
 
-cat("ASE (no covariates):\n")
-cat(sprintf("  TRUE precision:   %.2f%%\n", 100 * overall_ase_true))
-cat(sprintf("  PLUGIN precision: %.2f%%\n\n", 100 * overall_ase_plugin))
+cat("\nSSE Statistics:\n")
+cat(sprintf("  fisher    Mean=%.4f  SD=%.4f\n", mean(sse_fisher), sd(sse_fisher)))
+cat(sprintf("  ase       Mean=%.4f  SD=%.4f\n", mean(sse_ase), sd(sse_ase)))
+cat(sprintf("  ose       Mean=%.4f  SD=%.4f\n", mean(sse_ose), sd(sse_ose)))
 
-cat("OSE (no covariates):\n")
-cat(sprintf("  TRUE precision:   %.2f%%\n", 100 * overall_ose_true))
-cat(sprintf("  PLUGIN precision: %.2f%%\n\n", 100 * overall_ose_plugin))
+cat("\nTiming (mean ± SD per replication):\n")
+cat(sprintf("  fisher fit:    %.1f ± %.1f sec\n", mean(time_fisher), sd(time_fisher)))
+cat(sprintf("  ASE:           %.1f ± %.1f sec\n", mean(time_ase), sd(time_ase)))
+cat(sprintf("  OSE:           %.1f ± %.1f sec\n", mean(time_ose), sd(time_ose)))
+cat(sprintf("  Coverage:      %.1f ± %.1f sec\n", mean(time_coverage), sd(time_coverage)))
+cat(sprintf("  Total:         %.2f ± %.2f min\n",
+            mean(time_fisher + time_ase + time_ose + time_coverage)/60,
+            sd(time_fisher + time_ase + time_ose + time_coverage)/60))
 
-cat("============================================================================\n")
-cat("  SSE COMPARISON\n")
-cat("============================================================================\n\n")
-
-cat(sprintf("FISHER: Mean=%.4f, SD=%.4f, Min=%.4f, Max=%.4f\n",
-            mean(sse_fisher), sd(sse_fisher), min(sse_fisher), max(sse_fisher)))
-cat(sprintf("ASE:    Mean=%.4f, SD=%.4f, Min=%.4f, Max=%.4f\n",
-            mean(sse_ase), sd(sse_ase), min(sse_ase), max(sse_ase)))
-cat(sprintf("OSE:    Mean=%.4f, SD=%.4f, Min=%.4f, Max=%.4f\n\n",
-            mean(sse_ose), sd(sse_ose), min(sse_ose), max(sse_ose)))
-
-cat("============================================================================\n")
-cat("  TIMING COMPARISON\n")
-cat("============================================================================\n\n")
-
-cat(sprintf("FISHER:   Mean=%.2fs, SD=%.2fs\n", mean(time_fisher), sd(time_fisher)))
-cat(sprintf("ASE:      Mean=%.2fs, SD=%.2fs\n", mean(time_ase), sd(time_ase)))
-cat(sprintf("OSE:      Mean=%.2fs, SD=%.2fs\n", mean(time_ose), sd(time_ose)))
-cat(sprintf("Coverage: Mean=%.2fs, SD=%.2fs\n", mean(time_coverage), sd(time_coverage)))
-cat(sprintf("Total:    Mean=%.2f min per replication\n\n",
-            mean(time_fisher + time_ase + time_ose + time_coverage)/60))
-
-cat("============================================================================\n")
-cat("  CONVERGENCE STATISTICS\n")
-cat("============================================================================\n\n")
-
-cat(sprintf("Fisher convergence: %.1f%% (%d/%d)\n",
-            100 * mean(converged_vec), sum(converged_vec), n_reps))
-cat(sprintf("Mean iterations: %.1f ± %.1f (range: [%d, %d])\n\n",
-            mean(iterations_vec), sd(iterations_vec),
-            min(iterations_vec), max(iterations_vec)))
+cat(sprintf("\nfisher convergence: %.1f%%\n\n",
+            100 * mean(converged_vec)))
 
 # Create output directory for aggregated results and plots
 output_dir <- "outputs_1d_have_info_n500"
@@ -227,12 +209,12 @@ cat(sprintf("Summary saved to: %s/summary_1d_have_info_n500.csv\n\n", output_dir
 # Save vertex-wise coverage CSV
 vertex_df <- data.frame(
   vertex = 1:n,
-  fisher_true = vertex_fisher_true,
-  fisher_plugin = vertex_fisher_plugin,
-  ase_true = vertex_ase_true,
-  ase_plugin = vertex_ase_plugin,
-  ose_true = vertex_ose_true,
-  ose_plugin = vertex_ose_plugin
+  fisher_true = vertex_rates$fisher_true,
+  fisher_plugin = vertex_rates$fisher_plugin,
+  ase_true = vertex_rates$ase_true,
+  ase_plugin = vertex_rates$ase_plugin,
+  ose_true = vertex_rates$ose_true,
+  ose_plugin = vertex_rates$ose_plugin
 )
 write.csv(vertex_df, file.path(output_dir, "vertex_coverage_1d_have_info_n500.csv"), row.names = FALSE)
 cat(sprintf("Vertex-wise CSV saved to: %s/vertex_coverage_1d_have_info_n500.csv\n", output_dir))
