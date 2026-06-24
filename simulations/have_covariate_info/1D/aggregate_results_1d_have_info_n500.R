@@ -144,6 +144,16 @@ cat(sprintf("\nfisher convergence: %.1f%%\n\n",
 output_dir <- "outputs_1d_have_info_n500"
 if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
 
+# --- Per-rep overall coverage (for backward compatibility) ---
+cov_matrix <- rbind(
+  fisher_true = colMeans(fisher_true_matrix, na.rm = TRUE),
+  fisher_plugin = colMeans(fisher_plugin_matrix, na.rm = TRUE),
+  ase_true = colMeans(ase_true_matrix, na.rm = TRUE),
+  ase_plugin = colMeans(ase_plugin_matrix, na.rm = TRUE),
+  ose_true = colMeans(ose_true_matrix, na.rm = TRUE),
+  ose_plugin = colMeans(ose_plugin_matrix, na.rm = TRUE)
+)
+
 # Save aggregated results
 aggregated <- list(
   n = n,
@@ -151,30 +161,9 @@ aggregated <- list(
   d = d,
   tau = tau,
   n_reps = n_reps,
-  overall_coverage = list(
-    fisher_true = overall_fisher_true,
-    fisher_plugin = overall_fisher_plugin,
-    ase_true = overall_ase_true,
-    ase_plugin = overall_ase_plugin,
-    ose_true = overall_ose_true,
-    ose_plugin = overall_ose_plugin
-  ),
-  vertex_coverage = list(
-    fisher_true = vertex_fisher_true,
-    fisher_plugin = vertex_fisher_plugin,
-    ase_true = vertex_ase_true,
-    ase_plugin = vertex_ase_plugin,
-    ose_true = vertex_ose_true,
-    ose_plugin = vertex_ose_plugin
-  ),
-  coverage_matrices = list(
-    fisher_true = fisher_true_matrix,
-    fisher_plugin = fisher_plugin_matrix,
-    ase_true = ase_true_matrix,
-    ase_plugin = ase_plugin_matrix,
-    ose_true = ose_true_matrix,
-    ose_plugin = ose_plugin_matrix
-  ),
+  methods = methods,
+  cov_matrix = cov_matrix,        # 6 x n_reps
+  vertex_rates = vertex_rates,    # list of 6 vectors length n
   sse = list(
     fisher = sse_fisher,
     ase = sse_ase,
@@ -198,10 +187,11 @@ cat(sprintf("Aggregated results saved to: %s/aggregated_1d_have_info_n500.rds\n"
 
 # Save summary CSV
 summary_df <- data.frame(
-  Method = c("fisher_true", "fisher_plugin", "ase_true", "ase_plugin", "ose_true", "ose_plugin"),
-  Mean_Coverage = 100 * c(overall_fisher_true, overall_fisher_plugin,
-                          overall_ase_true, overall_ase_plugin,
-                          overall_ose_true, overall_ose_plugin)
+  Method = methods,
+  Mean_Coverage = 100 * rowMeans(cov_matrix),
+  SD_Coverage = 100 * apply(cov_matrix, 1, sd),
+  Min_Coverage = 100 * apply(cov_matrix, 1, min),
+  Max_Coverage = 100 * apply(cov_matrix, 1, max)
 )
 write.csv(summary_df, file.path(output_dir, "summary_1d_have_info_n500.csv"), row.names = FALSE)
 cat(sprintf("Summary saved to: %s/summary_1d_have_info_n500.csv\n\n", output_dir))
@@ -222,18 +212,7 @@ cat(sprintf("Vertex-wise CSV saved to: %s/vertex_coverage_1d_have_info_n500.csv\
 # Create plots
 cat("\nCreating plots...\n")
 
-# Prepare data for plotting
-methods <- c("fisher_true", "fisher_plugin", "ase_true", "ase_plugin", "ose_true", "ose_plugin")
-cov_matrix <- rbind(
-  fisher_true_matrix,
-  fisher_plugin_matrix,
-  ase_true_matrix,
-  ase_plugin_matrix,
-  ose_true_matrix,
-  ose_plugin_matrix
-)
-rownames(cov_matrix) <- methods
-
+# Prepare data for plotting (cov_matrix already defined above)
 cov_long <- as.data.frame(t(cov_matrix)) |>
   mutate(rep = 1:n_reps) |>
   pivot_longer(-rep, names_to = "Method", values_to = "Coverage") |>
