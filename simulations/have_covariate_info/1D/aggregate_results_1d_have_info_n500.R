@@ -9,7 +9,7 @@ library(tidyr)
 
 cat("============================================================================\n")
 cat("  AGGREGATING: 1D WITH COVARIATE INFO (n=500)\n")
-cat("  Z0 = rnorm (covariates contain signal), maxit=30, 16 cores\n")
+cat("  Z0 = rnorm (covariates contain signal), maxit=15, tol=0.05\n")
 cat("  Methods: FISHER-TRUE/PLUGIN, ASE-TRUE/PLUGIN, OSE-TRUE/PLUGIN\n")
 cat("============================================================================\n\n")
 

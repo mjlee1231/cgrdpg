@@ -17,7 +17,7 @@
 # 1D SIMULATION WITH COVARIATE INFO: FISHER vs ASE vs OSE (n=500)
 # ============================================================================
 # Z0 = rnorm (covariates contain signal)
-# 100 replications, maxit=30, 16 cores parallel
+# 100 replications, maxit=15, tol=0.05, 16 cores parallel
 # Comparing WITH signal vs no_covariate_info (NO signal)
 # ============================================================================
 
@@ -38,7 +38,7 @@ echo "Array Task ID: $SLURM_ARRAY_TASK_ID"
 echo "Scenario: Z0 = rnorm (WITH covariate signal)"
 echo "Methods: FISHER-TRUE/PLUGIN, ASE-TRUE/PLUGIN, OSE-TRUE/PLUGIN"
 echo "Replication: $SLURM_ARRAY_TASK_ID/100"
-echo "Resources: 16 CPUs, 64GB RAM, maxit=30"
+echo "Resources: 16 CPUs, 64GB RAM, maxit=15, tol=0.05"
 echo "========================================"
 
 # Change to submission directory
