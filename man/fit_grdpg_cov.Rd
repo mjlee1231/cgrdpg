@@ -10,10 +10,9 @@ fit_grdpg_cov(
   d,
   p = NULL,
   q = NULL,
-  tau = 0.05,
-  maxit = 5,
-  tol = 0.01,
-  ridge = 0
+  tau = 0.001,
+  maxit = 30,
+  tol = 0.005
 )
 }
 \arguments{
@@ -27,13 +26,11 @@ fit_grdpg_cov(
 
 \item{q}{number of negative signature directions. If \code{NULL}, taken as \code{d-p}.}
 
-\item{tau}{smoothing threshold in (0, 1/2). Default 0.05.}
+\item{tau}{smoothing threshold in (0, 1/2). Default 0.001.}
 
-\item{maxit}{maximum number of Fisher-scoring sweeps. Default 5.}
+\item{maxit}{maximum number of Fisher-scoring sweeps. Default 30.}
 
-\item{tol}{stopping tolerance on the maximum row change of X. Default 1e-2.}
-
-\item{ridge}{small ridge inside linear solves. Default 0.}
+\item{tol}{stopping tolerance on the maximum row change of X. Default 0.005.}
 }
 \value{
 a list with \code{X}, \code{Z}, \code{Y}, \code{p}, \code{q}, \code{tau},
@@ -52,7 +49,6 @@ n <- 60; d <- 3; p_sig <- 2; q_sig <- 1; p_cov <- 4
 X0 <- matrix(rnorm(n*d, sd = 0.7), n, d)
 S <- diag(c(rep(1, p_sig), rep(-1, q_sig)))
 P <- X0 \%*\% S \%*\% t(X0)
-P <- pmin(pmax(P, 1e-3), 1-1e-3)
 A <- matrix(rbinom(n*n, 1, as.vector(P)), n, n); A[lower.tri(A)] <- t(A)[lower.tri(A)]; diag(A) <- 0
 Z0 <- matrix(rnorm(p_cov*d), p_cov, d)
 B <- Z0 \%*\% t(X0) + matrix(rnorm(p_cov*n), p_cov, n)

@@ -22,12 +22,13 @@ compute_G_in_true <- function(i, X0, Y0, Z0, tau) {
 
   G_net <- matrix(0, d, d)
   for (j in 1:n) {
+    # Sum over all j - Fisher info for node i includes all incident edges
     G_net <- G_net + w[j] * outer(Y0[j, ], Y0[j, ])
   }
 
   G_cov <- crossprod(Z0)
 
-  # CORRECTED: Include normalization
+  # CORRECTED: Include normalization and sum over all j
   G_in <- (G_net + G_cov) / (n + p_cov)
 
   return(G_in)
@@ -44,12 +45,13 @@ compute_G_in_plugin <- function(i, X_est, Y_est, Z_est, tau) {
 
   G_net <- matrix(0, d, d)
   for (j in 1:n) {
+    # Sum over all j - Fisher info for node i includes all incident edges
     G_net <- G_net + w[j] * outer(Y_est[j, ], Y_est[j, ])
   }
 
   G_cov <- crossprod(Z_est)
 
-  # CORRECTED: Include normalization
+  # CORRECTED: Include normalization and sum over all j
   G_in <- (G_net + G_cov) / (n + p_cov)
 
   return(G_in)
@@ -104,14 +106,11 @@ cat(sprintf("Model fitting: %.2f seconds (%.2f minutes)\n\n", fit_time, fit_time
 cat("Procrustes alignment...\n")
 X_est <- fit$X
 Z_est <- fit$Z
-
-Uhat <- svd(X_est)$u
-U0 <- svd(X0)$u
-W_svd <- svd(t(Uhat) %*% U0)
-R <- W_svd$u %*% t(W_svd$v)
+M <- t(X_est) %*% X0
+svd_res <- svd(M)
+R <- svd_res$u %*% t(svd_res$v)
 X_aligned <- X_est %*% R
 Z_updated <- B %*% X_aligned %*% solve(t(X_aligned) %*% X_aligned)
-
 
 SSE <- sum((X_aligned - X0)^2)
 cat(sprintf("SSE: %.4f\n\n", SSE))

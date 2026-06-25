@@ -141,7 +141,8 @@ collect_estimates <- function(n, p_cov, d = 3, p_sig = 2, q_sig = 1,
   for (idx in 1:n_vertices) {
     i <- vertices_to_track[idx]
     G_in <- compute_G_in(i, X0_ref, Y0_ref, Z0_ref, tau = 0.05)
-    theoretical_cov[idx, , ] <- solve(G_in)
+    # G_in is already normalized by (n + p_cov), so divide by (n + p_cov) after inverting
+    theoretical_cov[idx, , ] <- solve(G_in) / (n + p_cov)
   }
 
   if (verbose) {
@@ -194,17 +195,34 @@ plot_scatter_2d <- function(collected_data, vertex_idx = 1, coords = c(1, 2)) {
   # Compute empirical covariance
   Sigma_emp <- cov(estimates[, coords])
 
+  # Create theoretical ellipse
+  make_ellipse <- function(center, cov_matrix, level = 0.95, npoints = 100) {
+    radius <- sqrt(qchisq(level, df = 2))
+    eig <- eigen(cov_matrix)
+    vectors <- eig$vectors
+    values <- eig$values
+    theta <- seq(0, 2 * pi, length.out = npoints)
+    circle <- rbind(cos(theta), sin(theta))
+    ellipse <- t(center + radius * vectors %*% diag(sqrt(values)) %*% circle)
+    data.frame(x = ellipse[, 1], y = ellipse[, 2])
+  }
+
+  ellipse_theoretical <- make_ellipse(c(x_true, y_true), Sigma_2d, level = 0.95)
+
   # Create data frame
   df <- data.frame(x = x_est, y = y_est)
 
   # Plot
   p <- ggplot(df, aes(x = x, y = y)) +
     geom_point(alpha = 0.3, size = 1.5, color = "steelblue") +
-    geom_point(aes(x = x_true, y = y_true), color = "red", size = 4, shape = 3) +
-    stat_ellipse(level = 0.95, color = "darkblue", linetype = "dashed") +
+    geom_path(data = ellipse_theoretical, aes(x = x, y = y),
+              color = "darkgreen", linetype = "solid", size = 1) +
+    stat_ellipse(level = 0.95, color = "darkblue", linetype = "dashed", size = 1) +
+    geom_point(data = data.frame(x = x_true, y = y_true),
+               aes(x = x, y = y), color = "red", size = 4, shape = 3) +
     labs(
       title = sprintf("Asymptotic Normality: Vertex %d", vertex_id),
-      subtitle = sprintf("Coordinates %d vs %d (%d replicates)",
+      subtitle = sprintf("Coordinates %d vs %d (%d replicates)\nGreen solid = Theoretical (from G_in), Blue dashed = Empirical",
                          coords[1], coords[2], nrow(df)),
       x = sprintf("Coordinate %d", coords[1]),
       y = sprintf("Coordinate %d", coords[2])
@@ -322,61 +340,86 @@ plot_qq_plots <- function(collected_data, vertex_idx = 1) {
 # ------------------------------------------------------------------------------
 cat("Collecting estimates across replicates...\n\n")
 
-# Collect data
-collected <- collect_estimates(
-  n = 60,
-  p_cov = 5,
-  d = 3,
-  n_reps = 100,
-  vertices_to_track = c(10, 20, 30, 40, 50),
-  seed = 456,
-  verbose = TRUE
+# Run for multiple scenarios
+scenarios <- list(
+  list(n = 100, p_cov = 50, name = "n100_p50"),
+  list(n = 500, p_cov = 250, name = "n500_p250")
 )
+
+collected_all <- list()
+
+for (scenario in scenarios) {
+  cat(sprintf("\n=== Scenario: n=%d, p_cov=%d ===\n", scenario$n, scenario$p_cov))
+
+  # Collect data
+  collected_all[[scenario$name]] <- collect_estimates(
+    n = scenario$n,
+    p_cov = scenario$p_cov,
+    d = 3,
+    n_reps = 100,
+    vertices_to_track = c(5, 10, 20, 50),
+    seed = 456,
+    verbose = TRUE
+  )
+}
 
 cat("\nCreating visualizations...\n")
 
 # Create output directory for plots
 dir.create("simulations/plots", showWarnings = FALSE, recursive = TRUE)
 
-# 1. Scatter plots for different vertex/coordinate pairs
-pdf("simulations/plots/scatter_asymptotic_normality.pdf", width = 10, height = 8)
-for (v_idx in 1:length(collected$vertices_tracked)) {
-  # Plot coordinates 1 vs 2
-  result_12 <- plot_scatter_2d(collected, vertex_idx = v_idx, coords = c(1, 2))
+# Create plots for each scenario
+for (scenario_name in names(collected_all)) {
+  collected <- collected_all[[scenario_name]]
 
-  # Plot coordinates 1 vs 3
-  result_13 <- plot_scatter_2d(collected, vertex_idx = v_idx, coords = c(1, 3))
+  cat(sprintf("\nCreating plots for %s...\n", scenario_name))
 
-  # Plot coordinates 2 vs 3
-  result_23 <- plot_scatter_2d(collected, vertex_idx = v_idx, coords = c(2, 3))
+  # 1. Scatter plots for different vertex/coordinate pairs
+  pdf(sprintf("simulations/plots/scatter_asymptotic_normality_%s.pdf", scenario_name),
+      width = 10, height = 8)
+  for (v_idx in 1:length(collected$vertices_tracked)) {
+    # Plot coordinates 1 vs 2
+    result_12 <- plot_scatter_2d(collected, vertex_idx = v_idx, coords = c(1, 2))
 
-  cat(sprintf("\nVertex %d:\n", collected$vertices_tracked[v_idx]))
-  cat("Empirical cov (coords 1-2):\n")
-  print(result_12$empirical_cov)
-  cat("Theoretical cov (coords 1-2):\n")
-  print(result_12$theoretical_cov)
+    # Plot coordinates 1 vs 3
+    result_13 <- plot_scatter_2d(collected, vertex_idx = v_idx, coords = c(1, 3))
+
+    # Plot coordinates 2 vs 3
+    result_23 <- plot_scatter_2d(collected, vertex_idx = v_idx, coords = c(2, 3))
+
+    cat(sprintf("\nVertex %d:\n", collected$vertices_tracked[v_idx]))
+    cat("Empirical cov (coords 1-2):\n")
+    print(result_12$empirical_cov)
+    cat("Theoretical cov (coords 1-2):\n")
+    print(result_12$theoretical_cov)
+  }
+  dev.off()
+
+  # 2. Marginal histograms
+  pdf(sprintf("simulations/plots/histograms_asymptotic_normality_%s.pdf", scenario_name),
+      width = 8, height = 10)
+  for (v_idx in 1:length(collected$vertices_tracked)) {
+    plot_marginal_histograms(collected, vertex_idx = v_idx)
+  }
+  dev.off()
+
+  # 3. Q-Q plots
+  pdf(sprintf("simulations/plots/qq_asymptotic_normality_%s.pdf", scenario_name),
+      width = 8, height = 10)
+  for (v_idx in 1:length(collected$vertices_tracked)) {
+    plot_qq_plots(collected, vertex_idx = v_idx)
+  }
+  dev.off()
 }
-dev.off()
-
-# 2. Marginal histograms
-pdf("simulations/plots/histograms_asymptotic_normality.pdf", width = 8, height = 10)
-for (v_idx in 1:length(collected$vertices_tracked)) {
-  plot_marginal_histograms(collected, vertex_idx = v_idx)
-}
-dev.off()
-
-# 3. Q-Q plots
-pdf("simulations/plots/qq_asymptotic_normality.pdf", width = 8, height = 10)
-for (v_idx in 1:length(collected$vertices_tracked)) {
-  plot_qq_plots(collected, vertex_idx = v_idx)
-}
-dev.off()
 
 cat("\nPlots saved to simulations/plots/\n")
-cat("  - scatter_asymptotic_normality.pdf\n")
-cat("  - histograms_asymptotic_normality.pdf\n")
-cat("  - qq_asymptotic_normality.pdf\n")
+cat("  - scatter_asymptotic_normality_n100_p50.pdf\n")
+cat("  - scatter_asymptotic_normality_n500_p250.pdf\n")
+cat("  - histograms_asymptotic_normality_n100_p50.pdf\n")
+cat("  - histograms_asymptotic_normality_n500_p250.pdf\n")
+cat("  - qq_asymptotic_normality_n100_p50.pdf\n")
+cat("  - qq_asymptotic_normality_n500_p250.pdf\n")
 
 # Save collected data
-saveRDS(collected, "simulations/asymptotic_normality_data.rds")
+saveRDS(collected_all, "simulations/asymptotic_normality_data.rds")
 cat("\nData saved to simulations/asymptotic_normality_data.rds\n")

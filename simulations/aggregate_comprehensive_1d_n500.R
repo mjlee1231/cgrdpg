@@ -1,10 +1,16 @@
 #!/usr/bin/env Rscript
 # Aggregate comprehensive 1D simulation results across 100 replications
 # Computes vertex-wise coverage for Fisher vs ASE vs OSE
+# WITH COVARIATE SIGNAL: Z0 = rnorm(p_cov, d)
+
+library(ggplot2)
+library(dplyr)
+library(tidyr)
 
 cat("============================================================================\n")
 cat("  AGGREGATING 1D COMPREHENSIVE SIMULATION RESULTS\n")
 cat("  Computing vertex-wise coverage across 100 replications\n")
+cat("  WITH COVARIATE SIGNAL: Z0 = rnorm, maxit=30, 16 cores\n")
 cat("============================================================================\n\n")
 
 results_dir <- "comprehensive_1d_n500_results"
@@ -27,7 +33,11 @@ cat(sprintf("Found %d replications\n", n_reps))
 # Read first file to get dimensions
 first_result <- readRDS(result_files[1])
 n <- first_result$n
-cat(sprintf("Number of vertices: %d\n\n", n))
+p_cov <- first_result$p_cov
+d <- first_result$d
+tau <- first_result$tau
+cat(sprintf("Number of vertices: %d\n", n))
+cat(sprintf("Parameters: n=%d, p_cov=%d, d=%d, tau=%.3f\n\n", n, p_cov, d, tau))
 
 # Initialize storage
 fisher_true_matrix <- matrix(NA, nrow = n, ncol = n_reps)
@@ -46,6 +56,10 @@ time_fisher <- numeric(n_reps)
 time_ase <- numeric(n_reps)
 time_ose <- numeric(n_reps)
 time_coverage <- numeric(n_reps)
+
+# Storage for convergence
+converged_vec <- logical(n_reps)
+iterations_vec <- integer(n_reps)
 
 cat("Reading all replications...\n")
 for (r in 1:n_reps) {
@@ -71,6 +85,10 @@ for (r in 1:n_reps) {
   time_ase[r] <- result$timing$ase
   time_ose[r] <- result$timing$ose
   time_coverage[r] <- result$timing$coverage
+
+  # Convergence
+  converged_vec[r] <- result$converged
+  iterations_vec[r] <- result$iterations
 }
 
 cat("\nComputing vertex-wise coverage...\n")
@@ -130,9 +148,26 @@ cat(sprintf("Coverage: Mean=%.2fs, SD=%.2fs\n", mean(time_coverage), sd(time_cov
 cat(sprintf("Total:    Mean=%.2f min per replication\n\n",
             mean(time_fisher + time_ase + time_ose + time_coverage)/60))
 
+cat("============================================================================\n")
+cat("  CONVERGENCE STATISTICS\n")
+cat("============================================================================\n\n")
+
+cat(sprintf("Fisher convergence: %.1f%% (%d/%d)\n",
+            100 * mean(converged_vec), sum(converged_vec), n_reps))
+cat(sprintf("Mean iterations: %.1f ± %.1f (range: [%d, %d])\n\n",
+            mean(iterations_vec), sd(iterations_vec),
+            min(iterations_vec), max(iterations_vec)))
+
+# Create output directory for aggregated results and plots
+output_dir <- "outputs_comprehensive_1d_n500"
+if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
+
 # Save aggregated results
 aggregated <- list(
   n = n,
+  p_cov = p_cov,
+  d = d,
+  tau = tau,
   n_reps = n_reps,
   overall_coverage = list(
     fisher_true = overall_fisher_true,
@@ -168,14 +203,29 @@ aggregated <- list(
     ase = time_ase,
     ose = time_ose,
     coverage = time_coverage
+  ),
+  convergence = list(
+    converged = converged_vec,
+    iterations = iterations_vec,
+    convergence_rate = mean(converged_vec)
   )
 )
 
-saveRDS(aggregated, "comprehensive_1d_n500_aggregated.rds")
-cat("Aggregated results saved to: comprehensive_1d_n500_aggregated.rds\n")
+saveRDS(aggregated, file.path(output_dir, "aggregated_comprehensive_1d_n500.rds"))
+cat(sprintf("Aggregated results saved to: %s/aggregated_comprehensive_1d_n500.rds\n", output_dir))
 
-# Save CSV
-df <- data.frame(
+# Save summary CSV
+summary_df <- data.frame(
+  Method = c("fisher_true", "fisher_plugin", "ase_true", "ase_plugin", "ose_true", "ose_plugin"),
+  Mean_Coverage = 100 * c(overall_fisher_true, overall_fisher_plugin,
+                          overall_ase_true, overall_ase_plugin,
+                          overall_ose_true, overall_ose_plugin)
+)
+write.csv(summary_df, file.path(output_dir, "summary_comprehensive_1d_n500.csv"), row.names = FALSE)
+cat(sprintf("Summary saved to: %s/summary_comprehensive_1d_n500.csv\n\n", output_dir))
+
+# Save vertex-wise coverage CSV
+vertex_df <- data.frame(
   vertex = 1:n,
   fisher_true = vertex_fisher_true,
   fisher_plugin = vertex_fisher_plugin,
@@ -184,8 +234,81 @@ df <- data.frame(
   ose_true = vertex_ose_true,
   ose_plugin = vertex_ose_plugin
 )
-write.csv(df, "comprehensive_1d_n500_vertex_coverage.csv", row.names = FALSE)
-cat("Vertex-wise CSV saved to: comprehensive_1d_n500_vertex_coverage.csv\n")
+write.csv(vertex_df, file.path(output_dir, "vertex_coverage_comprehensive_1d_n500.csv"), row.names = FALSE)
+cat(sprintf("Vertex-wise CSV saved to: %s/vertex_coverage_comprehensive_1d_n500.csv\n", output_dir))
+
+# Create plots
+cat("\nCreating plots...\n")
+
+# Prepare data for plotting
+methods <- c("fisher_true", "fisher_plugin", "ase_true", "ase_plugin", "ose_true", "ose_plugin")
+cov_matrix <- rbind(
+  fisher_true_matrix,
+  fisher_plugin_matrix,
+  ase_true_matrix,
+  ase_plugin_matrix,
+  ose_true_matrix,
+  ose_plugin_matrix
+)
+rownames(cov_matrix) <- methods
+
+cov_long <- as.data.frame(t(cov_matrix)) |>
+  mutate(rep = 1:n_reps) |>
+  pivot_longer(-rep, names_to = "Method", values_to = "Coverage") |>
+  mutate(
+    Coverage = Coverage * 100,
+    Estimator = case_when(
+      grepl("fisher", Method) ~ "Fisher",
+      grepl("ase", Method) ~ "ASE",
+      grepl("ose", Method) ~ "OSE"
+    ),
+    Precision = ifelse(grepl("true", Method), "TRUE", "PLUGIN")
+  )
+
+# Plot 1: Boxplot
+p1 <- ggplot(cov_long, aes(x = Method, y = Coverage, fill = Estimator)) +
+  geom_boxplot() +
+  geom_hline(yintercept = 95, linetype = "dashed", color = "red", linewidth = 0.8) +
+  scale_fill_manual(values = c(Fisher = "#E69F00", ASE = "#55A868", OSE = "#C44E52")) +
+  labs(
+    title = sprintf("Coverage Rates: 1D WITH Covariate Signal (n=%d, %d reps)", n, n_reps),
+    subtitle = "Z0 = rnorm, B contains signal | Dashed line: 95% nominal",
+    x = NULL, y = "Coverage Rate (%)"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+
+pdf(file.path(output_dir, "coverage_boxplot_comprehensive_1d_n500.pdf"), width = 10, height = 6)
+print(p1)
+dev.off()
+
+# Plot 2: Vertex-wise coverage
+vertex_plot_df <- vertex_df |>
+  pivot_longer(-vertex, names_to = "Method", values_to = "Coverage") |>
+  mutate(Coverage = Coverage * 100)
+
+p2 <- ggplot(vertex_plot_df, aes(x = vertex, y = Coverage, color = Method)) +
+  geom_line(linewidth = 0.7, alpha = 0.85) +
+  geom_hline(yintercept = 95, linetype = "dashed", color = "red", linewidth = 0.8) +
+  scale_color_manual(values = c(
+    fisher_true = "#E69F00", fisher_plugin = "#F0E442",
+    ase_true = "#2ca02c", ase_plugin = "#98df8a",
+    ose_true = "#d62728", ose_plugin = "#ff9896"
+  )) +
+  labs(
+    title = sprintf("Vertex-wise Coverage: 1D WITH Covariate Signal (n=%d, %d reps)", n, n_reps),
+    subtitle = "Z0 = rnorm, B contains signal | Dashed line: 95% nominal",
+    x = "Vertex Index", y = "Coverage Rate (%)", color = "Method"
+  ) +
+  theme_minimal(base_size = 13)
+
+pdf(file.path(output_dir, "vertex_coverage_comprehensive_1d_n500.pdf"), width = 12, height = 6)
+print(p2)
+dev.off()
+
+cat("Plots saved:\n")
+cat(sprintf("  - %s/coverage_boxplot_comprehensive_1d_n500.pdf\n", output_dir))
+cat(sprintf("  - %s/vertex_coverage_comprehensive_1d_n500.pdf\n", output_dir))
 
 cat("\n============================================================================\n")
 cat("  AGGREGATION COMPLETE\n")

@@ -11,11 +11,10 @@ fisher_sweep_X(
   B,
   sign_diag,
   tau = 0.05,
-  ridge = 0,
   w_cap = Inf,
-  ls_beta = 0.8,
-  ls_c = 0.01,
-  ls_max = 20
+  ls_beta = 0.35,
+  ls_c = 1e-04,
+  ls_max = 30
 )
 }
 \arguments{
@@ -31,15 +30,13 @@ fisher_sweep_X(
 
 \item{tau}{smoothing parameter for psi.}
 
-\item{ridge}{small ridge added to the information matrix for numerical stability.}
-
 \item{w_cap}{optional cap on psi'(s); default Inf}
 
-\item{ls_beta}{backtracking shrink factor in (0,1); default 0.8.}
+\item{ls_beta}{line search backtracking shrink factor in (0,1); default 0.35.}
 
-\item{ls_c}{Armijo constant in (0,1); default 1e-2 (for ascent).}
+\item{ls_c}{Armijo line search constant in (0,1); default 1e-4 (for ascent).}
 
-\item{ls_max}{maximum backtracking steps; default 20.}
+\item{ls_max}{maximum backtracking steps; default 30.}
 }
 \value{
 Updated X.

@@ -112,7 +112,8 @@ test_coverage_replicate <- function(n, p_cov, d = 3, p_sig = 2, q_sig = 1,
       next
     }
 
-    Sigma_i <- solve(G_in)
+    # G_in is already normalized by (n + p_cov), so divide by (n + p_cov) after inverting
+    Sigma_i <- solve(G_in) / (n + p_cov)
     std_errors <- sqrt(diag(Sigma_i))
     se_matrix[idx, ] <- std_errors
 
@@ -299,17 +300,22 @@ if (!dir.exists("simulations")) {
 
 # Optional: Test different sample sizes
 cat("\n\n=== Testing different sample sizes ===\n")
-sample_sizes <- c(100, 500)
+scenarios <- list(
+  list(n = 100, p_cov = 50),
+  list(n = 500, p_cov = 250)
+)
 size_results <- list()
 
-for (n in sample_sizes) {
-  cat(sprintf("\n--- n = %d ---\n", n))
-  size_results[[as.character(n)]] <- run_coverage_simulation(
+for (scenario in scenarios) {
+  n <- scenario$n
+  p_cov <- scenario$p_cov
+  cat(sprintf("\n--- n = %d, p_cov = %d ---\n", n, p_cov))
+  size_results[[sprintf("n%d_p%d", n, p_cov)]] <- run_coverage_simulation(
     n = n,
-    p_cov = 5,
+    p_cov = p_cov,
     d = 3,
     n_reps = 100,
-    vertices_to_test = c(5, 25, 50, 75),
+    vertices_to_test = c(5, 10, 20, 50),
     alpha = 0.05,
     verbose = TRUE
   )
