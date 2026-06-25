@@ -73,8 +73,13 @@ fisher_sweep_X_parallel <- function(
     s_cov <- as.vector(t(Z) %*% resid)
     S <- s_net + s_cov
 
-    # Fisher information
-    G_net <- Yt %*% (Y * w)
+    # Fisher information with robust clipping
+    # MODIFICATION: Truncate s to [tau, 1-tau] in Fisher info denominator only
+    s_clipped <- pmax(pmin(s, 1 - tau), tau)
+    w_fisher <- dpsi(s_clipped, tau = tau)
+    if (is.finite(w_cap)) w_fisher <- pmin(w_fisher, w_cap)
+    w_fisher[i] <- 0
+    G_net <- Yt %*% (Y * w_fisher)
     G_cov <- ZtZ
     G <- G_net + G_cov
 
