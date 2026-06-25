@@ -119,9 +119,13 @@ cat(sprintf("  Converged: %s\n", ifelse(fit$converged, "YES", "NO")))
 cat(sprintf("  Iterations: %d\n", fit$iters))
 flush.console()
 
-# Extract final objective (negative log pseudo-likelihood)
+# Extract final objective
+# NOTE: fit$history$objective contains the log pseudo-likelihood (can be negative)
+# We need to negate it to get negative log-likelihood (should be positive)
 if (length(fit$history$objective) > 0) {
-  neg_log_lik <- tail(fit$history$objective, 1)
+  log_lik <- tail(fit$history$objective, 1)
+  neg_log_lik <- -log_lik  # Negate to get negative log-likelihood
+  cat(sprintf("  Final log-lik: %.4f\n", log_lik))
   cat(sprintf("  Final neg-log-lik: %.4f\n\n", neg_log_lik))
 
   cat("  Loss trajectory:\n")
