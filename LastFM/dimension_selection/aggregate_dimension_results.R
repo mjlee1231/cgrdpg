@@ -1,6 +1,9 @@
 #!/usr/bin/env Rscript
 # Aggregate dimension selection results from parallel jobs
 
+# Use Cairo for graphics on HPC (no X11 display)
+options(bitmapType = 'cairo')
+
 library(ggplot2)
 
 cat("============================================================================\n")
