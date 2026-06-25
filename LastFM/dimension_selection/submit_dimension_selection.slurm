@@ -9,7 +9,7 @@
 #SBATCH --time=04:00:00
 #SBATCH --array=1-5
 #SBATCH --output=logs/dimension_d%a_%j.out
-#SBATCH --error=logs/dimension_d%a_%j.err
+#SBATCH --error=errors/dimension_d%a_%j.err
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=mle6@iu.edu
 
@@ -22,8 +22,10 @@
 
 module load r/4.3.1
 
-# Create logs directory
+# Create directories for outputs
 mkdir -p logs
+mkdir -p errors
+mkdir -p results
 
 echo "========================================"
 echo "Job started at: $(date)"

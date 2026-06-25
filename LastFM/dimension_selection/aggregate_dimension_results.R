@@ -8,14 +8,14 @@ cat("  AGGREGATING DIMENSION SELECTION RESULTS\n")
 cat("============================================================================\n\n")
 
 # Check for result files
-result_files <- paste0("results_d", 1:5, ".rds")
+result_files <- paste0("results/results_d", 1:5, ".rds")
 found_files <- file.exists(result_files)
 
 if (!all(found_files)) {
   cat("ERROR: Not all result files found!\n")
   cat("Missing files:\n")
   for (i in which(!found_files)) {
-    cat(sprintf("  - results_d%d.rds\n", i))
+    cat(sprintf("  - results/results_d%d.rds\n", i))
   }
   stop("Cannot aggregate incomplete results")
 }
@@ -23,7 +23,7 @@ if (!all(found_files)) {
 cat("Found all 5 result files\n\n")
 
 # Load all results
-all_results <- lapply(1:5, function(d) readRDS(sprintf("results_d%d.rds", d)))
+all_results <- lapply(1:5, function(d) readRDS(sprintf("results/results_d%d.rds", d)))
 
 # Extract summary table
 results <- data.frame(
@@ -60,13 +60,13 @@ saveRDS(list(
   optimal_bic = optimal_bic,
   optimal_aic = optimal_aic,
   all_fits = all_results
-), "dimension_selection_aggregated.rds")
+), "results/dimension_selection_aggregated.rds")
 
-write.csv(results, "dimension_selection_summary.csv", row.names = FALSE)
+write.csv(results, "results/dimension_selection_summary.csv", row.names = FALSE)
 
 cat("\n\nResults saved to:\n")
-cat("  - dimension_selection_aggregated.rds (complete results)\n")
-cat("  - dimension_selection_summary.csv (summary table)\n\n")
+cat("  - results/dimension_selection_aggregated.rds (complete results)\n")
+cat("  - results/dimension_selection_summary.csv (summary table)\n\n")
 
 # ============================================================================
 # PLOTS
@@ -100,8 +100,8 @@ p1 <- ggplot(results_long, aes(x = d, y = value, color = criterion, group = crit
     plot.title = element_text(face = "bold")
   )
 
-ggsave("dimension_selection_criteria.pdf", p1, width = 8, height = 6)
-ggsave("dimension_selection_criteria.png", p1, width = 8, height = 6, dpi = 300)
+ggsave("results/dimension_selection_criteria.pdf", p1, width = 8, height = 6)
+ggsave("results/dimension_selection_criteria.png", p1, width = 8, height = 6, dpi = 300)
 
 # Plot 2: Negative log-likelihood vs dimension
 p2 <- ggplot(results, aes(x = d, y = neg_log_lik)) +
@@ -117,8 +117,8 @@ p2 <- ggplot(results, aes(x = d, y = neg_log_lik)) +
   theme_minimal(base_size = 13) +
   theme(plot.title = element_text(face = "bold"))
 
-ggsave("dimension_selection_loglik.pdf", p2, width = 8, height = 6)
-ggsave("dimension_selection_loglik.png", p2, width = 8, height = 6, dpi = 300)
+ggsave("results/dimension_selection_loglik.pdf", p2, width = 8, height = 6)
+ggsave("results/dimension_selection_loglik.png", p2, width = 8, height = 6, dpi = 300)
 
 # Plot 3: Number of parameters vs dimension
 p3 <- ggplot(results, aes(x = d, y = n_params)) +
@@ -134,8 +134,8 @@ p3 <- ggplot(results, aes(x = d, y = n_params)) +
   theme_minimal(base_size = 13) +
   theme(plot.title = element_text(face = "bold"))
 
-ggsave("dimension_selection_params.pdf", p3, width = 8, height = 6)
-ggsave("dimension_selection_params.png", p3, width = 8, height = 6, dpi = 300)
+ggsave("results/dimension_selection_params.pdf", p3, width = 8, height = 6)
+ggsave("results/dimension_selection_params.png", p3, width = 8, height = 6, dpi = 300)
 
 # Plot 4: Computation time vs dimension
 p4 <- ggplot(results, aes(x = d, y = time_sec / 3600)) +
@@ -151,14 +151,14 @@ p4 <- ggplot(results, aes(x = d, y = time_sec / 3600)) +
   theme_minimal(base_size = 13) +
   theme(plot.title = element_text(face = "bold"))
 
-ggsave("dimension_selection_timing.pdf", p4, width = 8, height = 6)
-ggsave("dimension_selection_timing.png", p4, width = 8, height = 6, dpi = 300)
+ggsave("results/dimension_selection_timing.pdf", p4, width = 8, height = 6)
+ggsave("results/dimension_selection_timing.png", p4, width = 8, height = 6, dpi = 300)
 
 cat("\nPlots saved:\n")
-cat("  - dimension_selection_criteria.pdf/png\n")
-cat("  - dimension_selection_loglik.pdf/png\n")
-cat("  - dimension_selection_params.pdf/png\n")
-cat("  - dimension_selection_timing.pdf/png\n")
+cat("  - results/dimension_selection_criteria.pdf/png\n")
+cat("  - results/dimension_selection_loglik.pdf/png\n")
+cat("  - results/dimension_selection_params.pdf/png\n")
+cat("  - results/dimension_selection_timing.pdf/png\n")
 
 cat("\n============================================================================\n")
 cat("AGGREGATION COMPLETE\n")

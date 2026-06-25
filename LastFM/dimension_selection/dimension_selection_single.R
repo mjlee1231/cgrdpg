@@ -195,7 +195,7 @@ result <- list(
   timestamp = Sys.time()
 )
 
-output_file <- sprintf("results_d%d.rds", d)
+output_file <- sprintf("results/results_d%d.rds", d)
 saveRDS(result, output_file)
 
 cat(sprintf("✓ Results saved to: %s\n\n", output_file))
