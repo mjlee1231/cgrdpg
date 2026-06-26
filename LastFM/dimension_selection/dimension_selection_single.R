@@ -86,8 +86,8 @@ cat(sprintf("STEP 2: Fitting model with d = %d\n", d))
 cat("============================================================================\n\n")
 flush.console()
 
-maxit <- 10
-tol <- 0.01
+maxit <- 20
+tol <- 0.05
 
 # Get number of cores from SLURM
 ncores <- as.integer(Sys.getenv("SLURM_CPUS_PER_TASK", "1"))
