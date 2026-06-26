@@ -139,7 +139,7 @@ NumericVector compute_gradient_cpp(int i, NumericVector A, NumericMatrix X,
 // [[Rcpp::export]]
 NumericMatrix compute_G_in_vectorized_cpp(int i, NumericMatrix X,
                                           NumericMatrix Y, NumericMatrix Z,
-                                          double tau = 0.05) {
+                                          double tau = 0.001) {
   int n = X.nrow();
   int d = X.ncol();
   int p_cov = Z.nrow();

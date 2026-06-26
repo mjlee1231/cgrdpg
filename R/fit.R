@@ -7,7 +7,7 @@
 #' @param p number of positive signature directions. If \code{NULL}, estimated.
 #' @param q number of negative signature directions. If \code{NULL}, taken as \code{d-p}.
 #' @details Dimension consistency (p + q == d) is validated internally by ase_grdpg().
-#' @param tau smoothing threshold in (0, 1/2). Default 0.05.
+#' @param tau smoothing threshold in (0, 1/2). Default 0.001.
 #' @param maxit maximum number of Fisher-scoring sweeps. Default 30.
 #' @param tol stopping tolerance on the maximum row change of X. Default 0.005.
 #' @return a list with \code{X}, \code{Z}, \code{Y}, \code{p}, \code{q}, \code{tau},
@@ -28,7 +28,7 @@
 #' @export
 fit_grdpg_cov <- function(
     A, B, d, p = NULL, q = NULL,
-    tau = 0.05, maxit = 30, tol = 0.005
+    tau = 0.001, maxit = 30, tol = 0.005
 ) {
   # Define n first
   n <- nrow(A)

@@ -11,12 +11,12 @@
 #' products can leave \eqn{(0,1)} during optimization.
 #'
 #' @param x numeric vector.
-#' @param tau smoothing threshold in (0, 1/2). Default \code{0.05}.
+#' @param tau smoothing threshold in (0, 1/2). Default \code{0.001}.
 #' @return numeric vector.
 #' @examples
 #' psi(0.2); dpsi(0.2); ddpsi(0.2)
 #' @export
-psi1 <- function(x, tau = 0.05) {
+psi1 <- function(x, tau = 0.001) {
   stopifnot(tau > 0, tau < 0.5)
   a <- -1/(2*tau^2)
   b <-  2/tau
@@ -28,7 +28,7 @@ psi1 <- function(x, tau = 0.05) {
 
 #' @rdname psi1
 #' @export
-psi2 <- function(x, tau = 0.05) {
+psi2 <- function(x, tau = 0.001) {
   stopifnot(tau > 0, tau < 0.5)
   s  <- 1 - tau
   a  <- -1/(2*tau^2)
@@ -40,53 +40,53 @@ psi2 <- function(x, tau = 0.05) {
 
 #' @rdname psi1
 #' @export
-psi <- function(x, tau = 0.05) {
+psi <- function(x, tau = 0.001) {
   psi1(x, tau) - psi2(x, tau)
 }
 
 #' @rdname psi1
 #' @export
-dpsi1 <- function(x, tau = 0.05) {
+dpsi1 <- function(x, tau = 0.001) {
   a <- -1/(2*tau^2); b <- 2/tau
   ifelse(x < tau, 2*a*x + b, 1/pmax(x, .Machine$double.eps))
 }
 
 #' @rdname psi1
 #' @export
-dpsi2 <- function(x, tau = 0.05) {
+dpsi2 <- function(x, tau = 0.001) {
   s <- 1 - tau; a <- -1/(2*tau^2); b <- (1 - 2*tau)/tau^2
   ifelse(x > s, 2*a*x + b, -1/pmax(1 - x, .Machine$double.eps))
 }
 
 #' @rdname psi1
 #' @export
-dpsi <- function(x, tau = 0.05) {
+dpsi <- function(x, tau = 0.001) {
   dpsi1(x, tau) - dpsi2(x, tau)
 }
 
 #' @rdname psi1
 #' @export
-ddpsi1 <- function(x, tau = 0.05) {
+ddpsi1 <- function(x, tau = 0.001) {
   a <- -1/(2*tau^2)
   ifelse(x < tau, 2*a, -1/pmax(x, .Machine$double.eps)^2)
 }
 
 #' @rdname psi1
 #' @export
-ddpsi2 <- function(x, tau = 0.05) {
+ddpsi2 <- function(x, tau = 0.001) {
   s <- 1 - tau; a <- -1/(2*tau^2)
   ifelse(x > s, 2*a, -1/pmax(1 - x, .Machine$double.eps)^2)
 }
 
 #' @rdname psi1
 #' @export
-ddpsi <- function(x, tau = 0.05) {
+ddpsi <- function(x, tau = 0.001) {
   ddpsi1(x, tau) - ddpsi2(x, tau)
 }
 
 #' Primitive (integral) of psi1
 #' @keywords internal
-Psi1 <- function(x, tau = 0.05) {
+Psi1 <- function(x, tau = 0.001) {
   stopifnot(tau > 0, tau < 0.5)
   a <- -1/(2*tau^2); b <- 2/tau; c <- log(tau) - 3/2
   # integral of quadratic from 0 to t: a/3 t^3 + b/2 t^2 + c t
@@ -104,7 +104,7 @@ Psi1 <- function(x, tau = 0.05) {
 
 #' Primitive (integral) of psi2
 #' @keywords internal
-Psi2 <- function(x, tau = 0.05) {
+Psi2 <- function(x, tau = 0.001) {
   stopifnot(tau > 0, tau < 0.5)
   s <- 1 - tau
   a <- -1/(2*tau^2); b <- (1 - 2*tau)/tau^2
@@ -126,7 +126,7 @@ Psi2 <- function(x, tau = 0.05) {
 #' Primitive (integral) of psi = psi1 - psi2
 #' @rdname psi1
 #' @export
-Psi <- function(x, tau = 0.05) {
+Psi <- function(x, tau = 0.001) {
   Psi1(x, tau) - Psi2(x, tau)
 }
 

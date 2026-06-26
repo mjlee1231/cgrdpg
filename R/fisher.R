@@ -19,7 +19,7 @@
 #' @export
 fisher_sweep_X <- function(
     A, X, Z, B, sign_diag,
-    tau = 0.05, w_cap = Inf,
+    tau = 0.001, w_cap = Inf,
     ls_beta = 0.35, ls_c = 1e-4, ls_max = 30) {
 
   n <- nrow(X); d <- ncol(X); p_cov <- nrow(Z)
@@ -126,7 +126,7 @@ fisher_sweep_X <- function(
 #' @param tau smoothing parameter for \code{psi}.
 #' @return Numeric scalar: the surrogate objective value.
 #' @export
-surrogate_objective <- function(A, X, Z, B, sign_diag, tau = 0.05) {
+surrogate_objective <- function(A, X, Z, B, sign_diag, tau = 0.001) {
   # Network term: sum over (i,j) pairs with i≠j: Σ_i Σ_{j≠i} [(A_ij - s_ij) ψ(s_ij) + Ψ(s_ij)]
   # For graphs without self-loops (diag(A)=0), exclude diagonal terms
   Y <- X %*% sign_diag

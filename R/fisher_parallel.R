@@ -19,7 +19,7 @@
 #' @export
 fisher_sweep_X_parallel <- function(
     A, X, Z, B, sign_diag,
-    tau = 0.05, w_cap = Inf,
+    tau = 0.001, w_cap = Inf,
     ls_beta = 0.35, ls_c = 1e-4, ls_max = 30,
     ncores = NULL) {
 
@@ -136,7 +136,7 @@ fisher_sweep_X_parallel <- function(
 #' @param d embedding dimension (d = p + q).
 #' @param p number of positive signature directions. If \code{NULL}, estimated.
 #' @param q number of negative signature directions. If \code{NULL}, taken as \code{d-p}.
-#' @param tau smoothing threshold in (0, 1/2). Default 0.05.
+#' @param tau smoothing threshold in (0, 1/2). Default 0.001.
 #' @param maxit maximum number of Fisher-scoring sweeps. Default 30.
 #' @param tol stopping tolerance on the maximum row change of X. Default 0.005.
 #' @param ncores number of cores to use; default: detectCores() - 1
@@ -145,7 +145,7 @@ fisher_sweep_X_parallel <- function(
 #' @export
 fit_grdpg_cov_parallel <- function(
     A, B, d, p = NULL, q = NULL,
-    tau = 0.05, maxit = 30, tol = 0.005,
+    tau = 0.001, maxit = 30, tol = 0.005,
     ncores = NULL
 ) {
   n <- nrow(A)

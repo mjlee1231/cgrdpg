@@ -7,11 +7,11 @@ using namespace Rcpp;
 //' Smoothed log(x) function: quadratic for x < tau, log(x) otherwise
 //'
 //' @param x numeric vector
-//' @param tau smoothing parameter (default 0.05)
+//' @param tau smoothing parameter (default 0.001)
 //' @return numeric vector of psi1(x)
 //' @export
 // [[Rcpp::export]]
-NumericVector psi1_cpp(NumericVector x, double tau = 0.05) {
+NumericVector psi1_cpp(NumericVector x, double tau = 0.001) {
   int n = x.size();
   NumericVector result(n);
 
@@ -36,11 +36,11 @@ NumericVector psi1_cpp(NumericVector x, double tau = 0.05) {
 //' Smoothed log(1-x) function: log(1-x) for x <= 1-tau, quadratic otherwise
 //'
 //' @param x numeric vector
-//' @param tau smoothing parameter (default 0.05)
+//' @param tau smoothing parameter (default 0.001)
 //' @return numeric vector of psi2(x)
 //' @export
 // [[Rcpp::export]]
-NumericVector psi2_cpp(NumericVector x, double tau = 0.05) {
+NumericVector psi2_cpp(NumericVector x, double tau = 0.001) {
   int n = x.size();
   NumericVector result(n);
 
@@ -66,22 +66,22 @@ NumericVector psi2_cpp(NumericVector x, double tau = 0.05) {
 //' psi(x) = psi1(x) - psi2(x)
 //'
 //' @param s numeric vector of inner products
-//' @param tau smoothing parameter (default 0.05)
+//' @param tau smoothing parameter (default 0.001)
 //' @return numeric vector of psi(s)
 //' @export
 // [[Rcpp::export]]
-NumericVector psi_cpp(NumericVector s, double tau = 0.05) {
+NumericVector psi_cpp(NumericVector s, double tau = 0.001) {
   return psi1_cpp(s, tau) - psi2_cpp(s, tau);
 }
 
 //' Fast C++ implementation of dpsi1 (derivative of psi1)
 //'
 //' @param x numeric vector
-//' @param tau smoothing parameter (default 0.05)
+//' @param tau smoothing parameter (default 0.001)
 //' @return numeric vector of psi1'(x)
 //' @export
 // [[Rcpp::export]]
-NumericVector dpsi1_cpp(NumericVector x, double tau = 0.05) {
+NumericVector dpsi1_cpp(NumericVector x, double tau = 0.001) {
   int n = x.size();
   NumericVector result(n);
 
@@ -103,11 +103,11 @@ NumericVector dpsi1_cpp(NumericVector x, double tau = 0.05) {
 //' Fast C++ implementation of dpsi2 (derivative of psi2)
 //'
 //' @param x numeric vector
-//' @param tau smoothing parameter (default 0.05)
+//' @param tau smoothing parameter (default 0.001)
 //' @return numeric vector of psi2'(x)
 //' @export
 // [[Rcpp::export]]
-NumericVector dpsi2_cpp(NumericVector x, double tau = 0.05) {
+NumericVector dpsi2_cpp(NumericVector x, double tau = 0.001) {
   int n = x.size();
   NumericVector result(n);
 
@@ -132,22 +132,22 @@ NumericVector dpsi2_cpp(NumericVector x, double tau = 0.05) {
 //' dpsi(x) = dpsi1(x) - dpsi2(x)
 //'
 //' @param s numeric vector of inner products
-//' @param tau smoothing parameter (default 0.05)
+//' @param tau smoothing parameter (default 0.001)
 //' @return numeric vector of psi'(s)
 //' @export
 // [[Rcpp::export]]
-NumericVector dpsi_cpp(NumericVector s, double tau = 0.05) {
+NumericVector dpsi_cpp(NumericVector s, double tau = 0.001) {
   return dpsi1_cpp(s, tau) - dpsi2_cpp(s, tau);
 }
 
 //' Fast C++ implementation of ddpsi1 (second derivative of psi1)
 //'
 //' @param x numeric vector
-//' @param tau smoothing parameter (default 0.05)
+//' @param tau smoothing parameter (default 0.001)
 //' @return numeric vector of psi1''(x)
 //' @export
 // [[Rcpp::export]]
-NumericVector ddpsi1_cpp(NumericVector x, double tau = 0.05) {
+NumericVector ddpsi1_cpp(NumericVector x, double tau = 0.001) {
   int n = x.size();
   NumericVector result(n);
 
@@ -169,11 +169,11 @@ NumericVector ddpsi1_cpp(NumericVector x, double tau = 0.05) {
 //' Fast C++ implementation of ddpsi2 (second derivative of psi2)
 //'
 //' @param x numeric vector
-//' @param tau smoothing parameter (default 0.05)
+//' @param tau smoothing parameter (default 0.001)
 //' @return numeric vector of psi2''(x)
 //' @export
 // [[Rcpp::export]]
-NumericVector ddpsi2_cpp(NumericVector x, double tau = 0.05) {
+NumericVector ddpsi2_cpp(NumericVector x, double tau = 0.001) {
   int n = x.size();
   NumericVector result(n);
 
@@ -198,22 +198,22 @@ NumericVector ddpsi2_cpp(NumericVector x, double tau = 0.05) {
 //' ddpsi(x) = ddpsi1(x) - ddpsi2(x)
 //'
 //' @param s numeric vector of inner products
-//' @param tau smoothing parameter (default 0.05)
+//' @param tau smoothing parameter (default 0.001)
 //' @return numeric vector of psi''(s)
 //' @export
 // [[Rcpp::export]]
-NumericVector ddpsi_cpp(NumericVector s, double tau = 0.05) {
+NumericVector ddpsi_cpp(NumericVector s, double tau = 0.001) {
   return ddpsi1_cpp(s, tau) - ddpsi2_cpp(s, tau);
 }
 
 //' Fast C++ implementation of Psi1 (integral of psi1)
 //'
 //' @param x numeric vector
-//' @param tau smoothing parameter (default 0.05)
+//' @param tau smoothing parameter (default 0.001)
 //' @return numeric vector of Psi1(x)
 //' @keywords internal
 // [[Rcpp::export]]
-NumericVector Psi1_cpp(NumericVector x, double tau = 0.05) {
+NumericVector Psi1_cpp(NumericVector x, double tau = 0.001) {
   int n = x.size();
   NumericVector result(n);
 
@@ -245,11 +245,11 @@ NumericVector Psi1_cpp(NumericVector x, double tau = 0.05) {
 //' Fast C++ implementation of Psi2 (integral of psi2)
 //'
 //' @param x numeric vector
-//' @param tau smoothing parameter (default 0.05)
+//' @param tau smoothing parameter (default 0.001)
 //' @return numeric vector of Psi2(x)
 //' @keywords internal
 // [[Rcpp::export]]
-NumericVector Psi2_cpp(NumericVector x, double tau = 0.05) {
+NumericVector Psi2_cpp(NumericVector x, double tau = 0.001) {
   int n = x.size();
   NumericVector result(n);
 
@@ -284,10 +284,10 @@ NumericVector Psi2_cpp(NumericVector x, double tau = 0.05) {
 //' Psi(x) = Psi1(x) - Psi2(x)
 //'
 //' @param s numeric vector of inner products
-//' @param tau smoothing parameter (default 0.05)
+//' @param tau smoothing parameter (default 0.001)
 //' @return numeric vector of Psi(s)
 //' @export
 // [[Rcpp::export]]
-NumericVector Psi_cpp(NumericVector s, double tau = 0.05) {
+NumericVector Psi_cpp(NumericVector s, double tau = 0.001) {
   return Psi1_cpp(s, tau) - Psi2_cpp(s, tau);
 }
