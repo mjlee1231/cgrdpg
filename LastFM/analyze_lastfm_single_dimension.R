@@ -140,14 +140,15 @@ ose_start <- Sys.time()
 X_ose <- X_ase
 
 for (i in 1:n) {
-  x_i <- X_ase[i, ]
+  x_i <- X_ase[i, , drop = FALSE]
   idx_j <- setdiff(1:n, i)
-  p_ij <- pmax(pmin(X_ase[idx_j, ] %*% x_i, 1 - eps_clip), eps_clip)
-  resid <- Aselect[i, idx_j] - p_ij
+  X_j <- X_ase[idx_j, , drop = FALSE]
+  p_ij <- pmax(pmin(X_j %*% t(x_i), 1 - eps_clip), eps_clip)
+  resid <- Aselect[i, idx_j] - as.vector(p_ij)
   w <- 1 / (p_ij * (1 - p_ij))
-  grad <- t(X_ase[idx_j, ]) %*% (resid * w)
-  H <- t(X_ase[idx_j, ]) %*% (X_ase[idx_j, ] * as.vector(w))
-  X_ose[i, ] <- x_i + solve(H + diag(1e-6, d)) %*% grad
+  grad <- t(X_j) %*% (resid * as.vector(w))
+  H <- t(X_j) %*% (X_j * as.vector(w))
+  X_ose[i, ] <- as.vector(x_i) + as.vector(solve(H + diag(1e-6, d)) %*% grad)
 }
 ose_time <- as.numeric(difftime(Sys.time(), ose_start, units = "secs"))
 cat(sprintf("  OSE completed in %.2f seconds\n\n", ose_time))
