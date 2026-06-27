@@ -1,4 +1,5 @@
-# Ignore all files except directory structure
+# Ignore all files except directory structure and SLURM scripts
 *
 !.gitignore
+!submit_*.slurm
 !*/
