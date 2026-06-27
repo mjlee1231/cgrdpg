@@ -6,7 +6,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=48
 #SBATCH --mem=192G
-#SBATCH --time=08:00:00
+#SBATCH --time=12:00:00
 #SBATCH --output=logs/lastfm_d4_%j.out
 #SBATCH --error=errors/lastfm_d4_%j.err
 #SBATCH --mail-type=END,FAIL
@@ -16,7 +16,7 @@
 # LastFM Analysis: d=4 (2nd optimal dimension by BIC)
 # ============================================================================
 # Parameters: maxit=20, tol=0.05, tau=0.001
-# Using 48 cores for parallel Fisher scoring
+# Using 48 cores for parallel Fisher scoring (12 hour limit)
 # ============================================================================
 
 module load r/4.3.1
@@ -26,7 +26,7 @@ echo "Job started at: $(date)"
 echo "Node: $(hostname)"
 echo "Job ID: $SLURM_JOB_ID"
 echo "Dimension: d = 4"
-echo "Resources: 48 CPUs, 192GB RAM, 8 hours"
+echo "Resources: 48 CPUs, 192GB RAM, 12 hours"
 echo "Parameters: maxit=20, tol=0.05, tau=0.001"
 echo "========================================"
 
