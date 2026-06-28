@@ -217,58 +217,116 @@ cat(sprintf("\n✓ Modified Fisher completed in %.2f seconds (%.2f hours)\n",
             fisher_time, fisher_time/3600))
 cat(sprintf("  Converged: %s\n", ifelse(fit_fisher$converged, "YES", "NO")))
 cat(sprintf("  Iterations: %d\n", fit_fisher$iters))
-cat(sprintf("  Final loss: %.4f\n", tail(fit_fisher$history$objective, 1)))
 flush.console()
 
-if (length(fit_fisher$history$objective) > 0) {
-  cat("\n  Loss trajectory:\n")
-  for (i in 1:length(fit_fisher$history$objective)) {
-    cat(sprintf("    Iter %d: %.6f\n", i-1, fit_fisher$history$objective[i]))
+# Safely extract final loss
+final_loss <- tryCatch({
+  if (!is.null(fit_fisher$history) && !is.null(fit_fisher$history$objective) &&
+      length(fit_fisher$history$objective) > 0) {
+    tail(fit_fisher$history$objective, 1)
+  } else {
+    NA
   }
-  flush.console()
-}
+}, error = function(e) {
+  cat(sprintf("  Warning: Could not extract final loss: %s\n", e$message))
+  NA
+})
+cat(sprintf("  Final loss: %.4f\n", final_loss))
+flush.console()
 
-if (length(fit_fisher$history$max_row_change) > 0) {
-  cat("\n  Max row change trajectory:\n")
-  for (i in 1:length(fit_fisher$history$max_row_change)) {
-    cat(sprintf("    Iter %d: %.6f\n", i, fit_fisher$history$max_row_change[i]))
+# Safely print loss trajectory
+tryCatch({
+  if (!is.null(fit_fisher$history) && !is.null(fit_fisher$history$objective) &&
+      length(fit_fisher$history$objective) > 0) {
+    cat("\n  Loss trajectory:\n")
+    obj_vals <- fit_fisher$history$objective
+    for (i in seq_along(obj_vals)) {
+      cat(sprintf("    Iter %d: %.6f\n", i-1, obj_vals[i]))
+    }
+    flush.console()
   }
-  cat("\n")
+}, error = function(e) {
+  cat(sprintf("  Warning: Could not print loss trajectory: %s\n", e$message))
   flush.console()
-}
+})
+
+# Safely print max row change trajectory
+tryCatch({
+  if (!is.null(fit_fisher$history) && !is.null(fit_fisher$history$max_row_change) &&
+      length(fit_fisher$history$max_row_change) > 0) {
+    cat("\n  Max row change trajectory:\n")
+    mrc_vals <- fit_fisher$history$max_row_change
+    for (i in seq_along(mrc_vals)) {
+      cat(sprintf("    Iter %d: %.6f\n", i, mrc_vals[i]))
+    }
+    cat("\n")
+    flush.console()
+  }
+}, error = function(e) {
+  cat(sprintf("  Warning: Could not print max row change: %s\n", e$message))
+  flush.console()
+})
 
 X_fisher <- fit_fisher$X
 
 # Evaluate Fisher
 cat("Evaluating Modified Fisher...\n")
 flush.console()
-perf_fisher <- evaluate_clustering(X_fisher, labelselect, "MODIFIED FISHER")
+
+perf_fisher <- tryCatch({
+  evaluate_clustering(X_fisher, labelselect, "MODIFIED FISHER")
+}, error = function(e) {
+  cat(sprintf("  Error evaluating Fisher: %s\n", e$message))
+  cat("  Returning NA for performance metrics\n")
+  flush.console()
+  list(silhouette = NA, ari = NA, bss_tss = NA)
+})
 
 # SAVE COMPLETE RESULTS
-complete_results <- list(
-  data = list(n = n, p = p, k = length(unique(labelselect)), d = d, labels = labelselect),
-  parameters = list(maxit = 20, tol = 0.05, tau = tau, ncores = ncores),
-  latent_positions = list(fisher = X_fisher, ase = X_ase, ose = X_ose),
-  performance = list(fisher = perf_fisher, ase = perf_ase, ose = perf_ose),
-  timing = list(
-    fisher = fisher_time,
-    ase = ase_time,
-    ose = ose_time,
-    eval = eval_time
-  ),
-  fisher_info = list(
-    converged = fit_fisher$converged,
-    iters = fit_fisher$iters,
-    objective = fit_fisher$history$objective,
-    max_row_change = fit_fisher$history$max_row_change
-  ),
-  hpc_info = list(
-    ncores = ncores,
-    completion_time = Sys.time()
-  )
-)
+cat("\nSaving complete results...\n")
+flush.console()
 
-saveRDS(complete_results, sprintf("results/lastfm_d%d_complete_results.rds", d))
+complete_results <- tryCatch({
+  list(
+    data = list(n = n, p = p, k = length(unique(labelselect)), d = d, labels = labelselect),
+    parameters = list(maxit = 20, tol = 0.05, tau = tau, ncores = ncores),
+    latent_positions = list(fisher = X_fisher, ase = X_ase, ose = X_ose),
+    performance = list(fisher = perf_fisher, ase = perf_ase, ose = perf_ose),
+    timing = list(
+      fisher = fisher_time,
+      ase = ase_time,
+      ose = ose_time,
+      eval = eval_time
+    ),
+    fisher_info = list(
+      converged = fit_fisher$converged,
+      iters = fit_fisher$iters,
+      objective = if (!is.null(fit_fisher$history)) fit_fisher$history$objective else NULL,
+      max_row_change = if (!is.null(fit_fisher$history)) fit_fisher$history$max_row_change else NULL
+    ),
+    hpc_info = list(
+      ncores = ncores,
+      completion_time = Sys.time()
+    )
+  )
+}, error = function(e) {
+  cat(sprintf("  Error creating results list: %s\n", e$message))
+  flush.console()
+  NULL
+})
+
+if (!is.null(complete_results)) {
+  tryCatch({
+    saveRDS(complete_results, sprintf("results/lastfm_d%d_complete_results.rds", d))
+    cat(sprintf("✓ Results saved to: results/lastfm_d%d_complete_results.rds\n", d))
+  }, error = function(e) {
+    cat(sprintf("  Error saving results: %s\n", e$message))
+  })
+  flush.console()
+} else {
+  cat("  Warning: Could not create complete results object\n")
+  flush.console()
+}
 
 cat("\n============================================================================\n")
 cat("  ANALYSIS COMPLETE\n")
