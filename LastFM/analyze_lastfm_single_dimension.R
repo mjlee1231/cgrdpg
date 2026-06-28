@@ -150,8 +150,10 @@ for (i in 1:n) {
   H <- t(X_j) %*% (X_j * as.vector(w))
   X_ose[i, ] <- as.vector(x_i) + as.vector(solve(H + diag(1e-6, d)) %*% grad)
 }
-ose_time <- as.numeric(difftime(Sys.time(), ose_start, units = "secs"))
-cat(sprintf("  OSE completed in %.2f seconds\n\n", ose_time))
+ose_refine_time <- as.numeric(difftime(Sys.time(), ose_start, units = "secs"))
+ose_time <- ase_time + ose_refine_time  # Total time including ASE initialization
+cat(sprintf("  OSE refinement in %.2f seconds (total: %.2f seconds with ASE)\n\n",
+            ose_refine_time, ose_time))
 flush.console()
 
 # Evaluate ASE and OSE
@@ -333,12 +335,12 @@ cat("  ANALYSIS COMPLETE\n")
 cat("============================================================================\n\n")
 
 cat("SUMMARY:\n")
-cat(sprintf("  ASE:             %.2fs, Sil=%.3f, ARI=%.3f\n",
-            ase_time, perf_ase$silhouette, perf_ase$ari))
-cat(sprintf("  OSE:             %.2fs, Sil=%.3f, ARI=%.3f\n",
-            ose_time, perf_ose$silhouette, perf_ose$ari))
-cat(sprintf("  MODIFIED FISHER: %.2fh, Sil=%.3f, ARI=%.3f\n",
-            fisher_time/3600, perf_fisher$silhouette, perf_fisher$ari))
+cat(sprintf("  ASE:             %.2fs, Sil=%.3f, ARI=%.3f, BSS/TSS=%.3f\n",
+            ase_time, perf_ase$silhouette, perf_ase$ari, perf_ase$bss_tss))
+cat(sprintf("  OSE (inc ASE):   %.2fs, Sil=%.3f, ARI=%.3f, BSS/TSS=%.3f\n",
+            ose_time, perf_ose$silhouette, perf_ose$ari, perf_ose$bss_tss))
+cat(sprintf("  MODIFIED FISHER: %.2fh, Sil=%.3f, ARI=%.3f, BSS/TSS=%.3f\n",
+            fisher_time/3600, perf_fisher$silhouette, perf_fisher$ari, perf_fisher$bss_tss))
 
 cat("\nResults saved:\n")
 cat(sprintf("  - results/lastfm_d%d_ase_ose_results.rds (early save)\n", d))
