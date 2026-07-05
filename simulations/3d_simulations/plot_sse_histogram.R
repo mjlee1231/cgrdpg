@@ -142,6 +142,12 @@ if ("sse_ase" %in% names(results)) {
 cat(sprintf("\nLoaded %d SSE values across %d methods\n",
             nrow(sse_data), length(unique(sse_data$Method))))
 
+# Rename CGRDPG to MSLE
+sse_data$Method <- gsub("CGRDPG", "MSLE", sse_data$Method)
+
+# Set factor levels to control panel order: ASE, OSE, MSLE
+sse_data$Method <- factor(sse_data$Method, levels = c("ASE", "OSE", "MSLE"))
+
 # Summary statistics
 cat("\nSummary statistics by method:\n")
 print(aggregate(SSE ~ Method, data = sse_data,
