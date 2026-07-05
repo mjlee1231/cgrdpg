@@ -6,29 +6,43 @@ clear; clc;
 fprintf('Quick Test: Surrogate Likelihood Implementation\n');
 fprintf('================================================\n\n');
 
-%% Small test problem
+%% Parameters matching R simulation (ase_ose_cgrdpg_vertex_wise_3d_n1000.R)
 n = 500;
-p_cov = 100;
+p_cov = 250;  % Using 250 for quick test (R uses 500 for n=1000)
 d = 3;
 p = 2;
 tau = 0.001;
-rng(42);
+rng(598);  % Same seed as R
 
-fprintf('Parameters: n=%d, p_cov=%d, d=%d\n\n', n, p_cov, d);
+fprintf('Parameters: n=%d, p_cov=%d, d=%d\n', n, p_cov, d);
+fprintf('(Matching R simulation data generation)\n\n');
 
-%% Generate data
-X_true = randn(n, d) * 0.5;
-Z_true = randn(p_cov, d) * 0.3;
+%% Generate data EXACTLY like R simulation
+% Latent positions: specific pattern (not random!)
+t = (1:n)' / n;
+X_true = [0.15 * sin(2*pi*t) + 0.6, ...
+          0.15 * cos(2*pi*t) + 0.6, ...
+          0.15 * cos(4*pi*t)];
+
+% Signature matrix
 S = diag([1, 1, -1]);
 
+% Covariate coefficients
+Z_true = randn(p_cov, d);
+
+% Edge probabilities
 Y_true = X_true * S;
-P_net = max(min(Y_true * Y_true', 0.99), 0.01);
+P_net = X_true * Y_true';
 
+fprintf('Edge probability range: [%.4f, %.4f]\n\n', min(P_net(:)), max(P_net(:)));
+
+% Generate adjacency matrix (undirected)
 A = double(rand(n) < P_net);
-A = triu(A, 1);
-A = A + A';
+A = triu(A, 1);  % Upper triangle only
+A = A + A';  % Make symmetric
 
-B = Z_true * X_true' + randn(p_cov, n) * 0.1;
+% Generate covariates with noise sd=1.0 (matching R)
+B = Z_true * X_true' + randn(p_cov, n);
 
 %% ASE baseline
 A_aug = A;
