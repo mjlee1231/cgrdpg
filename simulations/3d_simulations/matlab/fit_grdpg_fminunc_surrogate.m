@@ -86,7 +86,12 @@ function [X_init, Z_init] = initialize_ase(A, B, d, p)
 
     % Eigendecomposition
     [V, D] = eig(A_aug);
-    [eigvals, idx] = sort(diag(D), 'descend');
+    eigvals = diag(D);
+
+    % Sort by MAGNITUDE (absolute value) to match R's eigs_sym(..., which="LM")
+    % This is critical for GRDPG with negative eigenvalues!
+    [~, idx] = sort(abs(eigvals), 'descend');
+    eigvals = eigvals(idx);
     V = V(:, idx);
 
     % Take top d eigenvectors (unsigned version: U |Lambda|^{1/2})
@@ -119,14 +124,9 @@ function [f, g] = surrogate_objective_gradient(x, A, B, S, n, d, p_cov, tau)
     [psi_val, Psi_val, dpsi_val] = psi_functions(S_mat, tau);
 
     % Network component: sum((A - S) .* psi(S) + Psi(S))
-    % Only count each edge once (upper triangle for undirected)
-    triu_idx = triu(true(n), 1);
-    A_vec = A(triu_idx);
-    S_vec = S_mat(triu_idx);
-    psi_vec = psi_val(triu_idx);
-    Psi_vec = Psi_val(triu_idx);
-
-    net_obj = sum((A_vec - S_vec) .* psi_vec + Psi_vec);
+    % R sums over ALL pairs (i,j) with i≠j, which counts each edge twice for undirected graphs
+    % We must match R's approach exactly
+    net_obj = sum((A(:) - S_mat(:)) .* psi_val(:) + Psi_val(:));
 
     % Covariate component: -0.5 * ||B - Z*X^T||_F^2
     B_pred = Z * X';
@@ -138,25 +138,26 @@ function [f, g] = surrogate_objective_gradient(x, A, B, S, n, d, p_cov, tau)
     % Compute gradient if requested
     if nargout > 1
         % Gradient w.r.t. X
-        % From network term: grad_X = sum_j [(A_ij - S_ij) * dpsi(S_ij) - psi(S_ij)] * (dS_ij/dX_i)
+        % The derivative of [(A_ij - S_ij) * psi(S_ij) + Psi(S_ij)] w.r.t. S_ij is:
+        % d/dS_ij = -psi(S_ij) + (A_ij - S_ij)*dpsi(S_ij) + psi(S_ij) = (A_ij - S_ij)*dpsi(S_ij)
         %
-        % For S_ij = x_i^T S x_j:
-        %   dS_ij/dX_i = S * x_j
-        %   dS_ij/dX_j = S * x_i
+        % Objective sums over ALL (i,j) pairs with i≠j. Derivative w.r.t. x_i includes:
+        % - Terms where i is first index: sum_j [...] * dS_ij/dx_i
+        % - Terms where i is second index: sum_k [...] * dS_ki/dx_i
         %
-        % The gradient is:
-        %   grad_X_i = sum_{j neq i} [(A_ij - S_ij) * dpsi(S_ij) - psi(S_ij)] * S * x_j
+        % Since S and A are symmetric, factor of 2:
+        % grad_X_i = 2 * sum_{j≠i} (A_ij - S_ij)*dpsi(S_ij) * sign_diag * x_j
+        %
+        % In matrix form with W = (A - S) .* dpsi(S) and diagonal = 0:
+        % grad_X = 2 * W * Y * sign_diag (maximizing)
+        % But we're MINIMIZING -f, so negate: grad_X = -2 * W * Y * S
 
-        % Compute residual weights
-        % For undirected graph, we need to symmetrize contributions
-        W_net = (A - S_mat) .* dpsi_val - psi_val;
-        W_net(1:n+1:end) = 0;  % Zero diagonal
+        % Compute weight matrix
+        W_net = (A - S_mat) .* dpsi_val;  % Note: psi terms cancel in derivative!
+        W_net(1:n+1:end) = 0;  % Zero diagonal (no self-loops)
 
-        % Symmetrize for undirected graph
-        W_net = W_net + W_net';
-
-        % Network gradient: W_net * Y * S
-        grad_X_net = W_net * Y * S;
+        % Network gradient (factor of 2 from symmetric sum, then negate for minimization)
+        grad_X_net = -2 * W_net * Y * S;
 
         % Covariate gradient: Z^T * (B - Z*X')
         resid_cov = B - B_pred;
