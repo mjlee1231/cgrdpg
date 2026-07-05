@@ -166,7 +166,7 @@ p <- ggplot(sse_data, aes(x = SSE, fill = Method)) +
   theme_bw() +
   labs(
     title = "Distribution of Sum of Squared Errors (SSE)",
-    subtitle = sprintf("Based on %s", basename(results_file)),
+    subtitle = sprintf("Based on %s", basename(input_path)),
     x = "SSE",
     y = "Frequency"
   ) +
@@ -183,7 +183,7 @@ p2 <- ggplot(sse_data, aes(x = SSE, fill = Method)) +
   theme_bw() +
   labs(
     title = "Distribution of Sum of Squared Errors (SSE) - Overlaid",
-    subtitle = sprintf("Based on %s", basename(results_file)),
+    subtitle = sprintf("Based on %s", basename(input_path)),
     x = "SSE",
     y = "Frequency"
   ) +
