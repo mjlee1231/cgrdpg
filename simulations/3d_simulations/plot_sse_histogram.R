@@ -62,39 +62,76 @@ if (is.list(results) && length(results) > 0 && is.list(results[[1]]) &&
 
 # Try to infer structure
 if ("sse_ase" %in% names(results)) {
-  # Structure: direct SSE fields
-  cat("Structure: Single result with SSE fields\n")
+  # Structure: direct SSE fields (separate)
+  cat("Structure: Single result with separate SSE fields\n")
   sse_data <- data.frame(
     SSE = c(results$sse_ase, results$sse_ose, results$sse_cgrdpg),
     Method = rep(c("ASE", "OSE", "CGRDPG"),
                  each = length(results$sse_ase))
   )
-} else if (is.list(results) && length(results) > 0 && "sse_ase" %in% names(results[[1]])) {
+} else if ("sse" %in% names(results) && is.numeric(results$sse)) {
+  # Structure: single result with named SSE vector
+  cat("Structure: Single result with named SSE vector\n")
+  sse_vec <- results$sse
+  sse_data <- data.frame(
+    SSE = as.numeric(sse_vec),
+    Method = toupper(names(sse_vec))
+  )
+} else if (is.list(results) && length(results) > 0) {
   # Structure: list of replications
   cat(sprintf("Structure: List of %d replications\n", length(results)))
-  n_reps <- length(results)
 
-  # Extract SSE values from each replication
-  sse_ase <- sapply(results, function(x) {
-    if ("sse_ase" %in% names(x)) x$sse_ase else NA
-  })
-  sse_ose <- sapply(results, function(x) {
-    if ("sse_ose" %in% names(x)) x$sse_ose else NA
-  })
-  sse_cgrdpg <- sapply(results, function(x) {
-    if ("sse_cgrdpg" %in% names(x)) x$sse_cgrdpg else NA
-  })
+  # Check first element structure
+  first_elem <- results[[1]]
 
-  # Remove NAs
-  sse_ase <- sse_ase[!is.na(sse_ase)]
-  sse_ose <- sse_ose[!is.na(sse_ose)]
-  sse_cgrdpg <- sse_cgrdpg[!is.na(sse_cgrdpg)]
+  if ("sse_ase" %in% names(first_elem)) {
+    # Separate SSE fields
+    n_reps <- length(results)
+    sse_ase <- sapply(results, function(x) {
+      if ("sse_ase" %in% names(x)) x$sse_ase else NA
+    })
+    sse_ose <- sapply(results, function(x) {
+      if ("sse_ose" %in% names(x)) x$sse_ose else NA
+    })
+    sse_cgrdpg <- sapply(results, function(x) {
+      if ("sse_cgrdpg" %in% names(x)) x$sse_cgrdpg else NA
+    })
 
-  sse_data <- data.frame(
-    SSE = c(sse_ase, sse_ose, sse_cgrdpg),
-    Method = rep(c("ASE", "OSE", "CGRDPG"),
-                 times = c(length(sse_ase), length(sse_ose), length(sse_cgrdpg)))
-  )
+    # Remove NAs
+    sse_ase <- sse_ase[!is.na(sse_ase)]
+    sse_ose <- sse_ose[!is.na(sse_ose)]
+    sse_cgrdpg <- sse_cgrdpg[!is.na(sse_cgrdpg)]
+
+    sse_data <- data.frame(
+      SSE = c(sse_ase, sse_ose, sse_cgrdpg),
+      Method = rep(c("ASE", "OSE", "CGRDPG"),
+                   times = c(length(sse_ase), length(sse_ose), length(sse_cgrdpg)))
+    )
+  } else if ("sse" %in% names(first_elem) && is.numeric(first_elem$sse)) {
+    # Named SSE vector structure
+    cat("Extracting from named SSE vectors...\n")
+
+    # Extract SSE vectors from each replication
+    all_sse <- lapply(results, function(x) {
+      if ("sse" %in% names(x)) {
+        data.frame(
+          SSE = as.numeric(x$sse),
+          Method = toupper(names(x$sse))
+        )
+      } else {
+        NULL
+      }
+    })
+
+    # Remove NULLs and combine
+    all_sse <- all_sse[!sapply(all_sse, is.null)]
+    sse_data <- do.call(rbind, all_sse)
+  } else {
+    cat("Error: Cannot identify SSE data structure in list elements\n")
+    cat("First element structure:\n")
+    print(str(first_elem, max.level = 2))
+    quit(status = 1)
+  }
 } else {
   cat("Error: Cannot identify SSE data structure\n")
   cat("Available fields:\n")
