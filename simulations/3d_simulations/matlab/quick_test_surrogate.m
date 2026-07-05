@@ -31,7 +31,8 @@ A = A + A';
 B = Z_true * X_true' + randn(p_cov, n) * 0.1;
 
 %% ASE baseline
-A_aug = A; diag(A_aug) = sum(A, 2) / (n - 1);
+A_aug = A;
+A_aug(1:n+1:end) = sum(A, 2) / (n - 1);  % Set diagonal using linear indexing
 [V, D] = eig(A_aug);
 [eigvals, idx] = sort(diag(D), 'descend');
 X_ase = V(:, idx(1:d)) * diag(sqrt(abs(eigvals(1:d))));
