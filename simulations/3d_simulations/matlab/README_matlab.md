@@ -199,15 +199,100 @@ tau = 0.01;  % instead of 0.001
 options.Display = 'iter-detailed';
 ```
 
+## Running on HPC (Recommended!)
+
+### Why HPC?
+
+Running on HPC is **much faster** than local execution:
+- **Parallel processing**: 48 cores run replications simultaneously
+- **High-performance CPUs**: Faster per-iteration computation
+- **Uninterrupted**: Background execution for hours
+- **Expected speedup**: 30-60 min → ~1-2 hours for 100 reps
+
+### Setup on HPC
+
+1. **Check MATLAB availability:**
+
+```bash
+cd ~/cgrdpg/simulations/3d_simulations/matlab
+bash check_hpc_matlab.sh
+```
+
+2. **Submit the job:**
+
+```bash
+# Make sure you're in the matlab directory
+cd ~/cgrdpg/simulations/3d_simulations/matlab
+
+# Create log/error directories
+mkdir -p logs errors results
+
+# Submit to SLURM
+sbatch submit_matlab_100reps.slurm
+```
+
+3. **Monitor progress:**
+
+```bash
+# Check job status
+squeue -u mle6
+
+# Watch the log file in real-time
+tail -f logs/matlab_100reps_*.out
+
+# Check progress
+ls -lh results/replications_parallel/ | wc -l  # Count completed reps
+```
+
+4. **After completion:**
+
+```bash
+# Check results
+ls -lh results/
+
+# Download results to local machine (from your Mac)
+cd ~/Documents/GitHub/cgrdpg/simulations/3d_simulations/matlab
+rsync -avz mle6@bigred200.uits.iu.edu:~/cgrdpg/simulations/3d_simulations/matlab/results/ ./results/
+```
+
+### HPC Job Configuration
+
+The SLURM script (`submit_matlab_100reps.slurm`) uses:
+- **CPUs**: 48 cores (parallel parfor execution)
+- **Memory**: 192GB
+- **Time limit**: 4 hours (plenty of buffer)
+- **Expected runtime**: 1-2 hours
+
+### Troubleshooting HPC
+
+**MATLAB module not found:**
+```bash
+module spider matlab
+module load matlab/R2023a  # Use available version
+```
+
+**Out of memory:**
+```bash
+# Edit submit_matlab_100reps.slurm
+#SBATCH --mem=256G  # Increase from 192G
+```
+
+**Job timed out:**
+```bash
+# Edit submit_matlab_100reps.slurm
+#SBATCH --time=08:00:00  # Increase from 4 hours
+```
+
 ## Next Steps
 
-1. **Run multiple replications** (100 reps like R simulations)
-2. **Generate SSE histograms** for fminunc
-3. **Compare distributions**: R Fisher vs MATLAB fminunc
+1. ✅ **Run 100 reps on HPC** (using instructions above)
+2. **Download and compare results** with R
+3. **Generate SSE histograms** using `compare_matlab_vs_r.m`
 4. **Test on real data**: LastFM dataset (n=1699, d=1 and d=4)
 
 ## References
 
 - MATLAB fminunc documentation: https://www.mathworks.com/help/optim/ug/fminunc.html
+- MATLAB Parallel Computing: https://www.mathworks.com/help/parallel-computing/
 - Quasi-Newton methods: Nocedal & Wright, "Numerical Optimization"
 - GRDPG: Athreya et al. (2017), "Statistical inference on random dot product graphs"
