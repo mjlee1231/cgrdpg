@@ -7,8 +7,8 @@
 #SBATCH --cpus-per-task=48
 #SBATCH --mem=192G
 #SBATCH --time=04:00:00
-#SBATCH --output=logs/matlab_100reps_%j.out
-#SBATCH --error=errors/matlab_100reps_%j.err
+#SBATCH --output=logs/matlab_100reps_n1000_%j.out
+#SBATCH --error=errors/matlab_100reps_n1000_%j.err
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=mle6@iu.edu
 
@@ -62,7 +62,7 @@ if [ $EXIT_CODE -eq 0 ]; then
   echo "Check results in: results/n1000/"
 else
   echo "Status: FAILED (exit code $EXIT_CODE)"
-  echo "Check error log: errors/matlab_100reps_${SLURM_JOB_ID}.err"
+  echo "Check error log: errors/matlab_100reps_n1000_${SLURM_JOB_ID}.err"
 fi
 echo "========================================"
 
