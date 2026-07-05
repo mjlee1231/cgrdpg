@@ -8,11 +8,11 @@ fprintf('Comparing MATLAB fminunc vs R results\n');
 fprintf('========================================\n\n');
 
 %% Load MATLAB results
-if ~exist('results/fminunc_100reps_n1000_summary.mat', 'file')
-    error('MATLAB results not found. Run run_100_replications.m first.');
+if ~exist('results/n1000/summary.mat', 'file')
+    error('MATLAB n=1000 results not found. Run run_100_replications_parallel.m first.');
 end
 
-matlab_data = load('results/fminunc_100reps_n1000_summary.mat');
+matlab_data = load('results/n1000/summary.mat');
 summary = matlab_data.summary;
 
 fprintf('MATLAB Results Loaded:\n');

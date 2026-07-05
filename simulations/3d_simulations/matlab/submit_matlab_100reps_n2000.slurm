@@ -35,7 +35,7 @@ echo "========================================"
 cd $SLURM_SUBMIT_DIR
 
 # Create output directories if they don't exist
-mkdir -p results/replications_n2000_parallel
+mkdir -p results/n2000/replications
 mkdir -p logs
 mkdir -p errors
 
@@ -61,7 +61,7 @@ echo "Runtime: ${HOURS}h ${MINUTES}m ${SECONDS}s"
 if [ $EXIT_CODE -eq 0 ]; then
   echo "Status: SUCCESS"
   echo "100 replications (n=2000) completed"
-  echo "Check results in: results/fminunc_100reps_n2000_parallel_summary.mat"
+  echo "Check results in: results/n2000/"
 else
   echo "Status: FAILED (exit code $EXIT_CODE)"
   echo "Check error log: errors/matlab_100reps_n2000_${SLURM_JOB_ID}.err"

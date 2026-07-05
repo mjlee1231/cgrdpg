@@ -184,6 +184,15 @@ fprintf('  Mean iterations: %.1f\n', mean(iterations(converged > 0)));
 fprintf('  Mean time per rep: %.2f seconds\n\n', mean(time_elapsed(valid_fminunc)));
 
 %% Save results
+% Create n1000 output directory
+output_dir = 'results/n1000';
+if ~exist(output_dir, 'dir')
+    mkdir(output_dir);
+end
+if ~exist([output_dir '/replications'], 'dir')
+    mkdir([output_dir '/replications']);
+end
+
 summary = struct();
 summary.params = struct('n', n, 'p_cov', p_cov, 'd', d, 'p', p, 'tau', tau, 'n_reps', n_reps);
 summary.sse_ase = sse_ase;
@@ -196,22 +205,18 @@ summary.total_time = total_time;
 summary.n_workers = n_workers;
 
 % Save summary
-save('results/fminunc_100reps_n1000_parallel_summary.mat', 'summary');
-fprintf('Summary saved to: results/fminunc_100reps_n1000_parallel_summary.mat\n');
+save([output_dir '/summary.mat'], 'summary');
+fprintf('Summary saved to: %s/summary.mat\n', output_dir);
 
 % Save detailed results
-save('results/fminunc_100reps_n1000_parallel_detailed.mat', 'results_all', '-v7.3');
-fprintf('Detailed results saved to: results/fminunc_100reps_n1000_parallel_detailed.mat\n');
+save([output_dir '/detailed.mat'], 'results_all', '-v7.3');
+fprintf('Detailed results saved to: %s/detailed.mat\n', output_dir);
 
 % Save individual replications
-if ~exist('results/replications_parallel', 'dir')
-    mkdir('results/replications_parallel');
-end
-
 fprintf('Saving individual replications...');
 for rep = 1:n_reps
     rep_data = results_all{rep};
-    save(sprintf('results/replications_parallel/rep_%03d.mat', rep), 'rep_data');
+    save(sprintf('%s/replications/rep_%03d.mat', output_dir, rep), 'rep_data');
 end
 fprintf(' Done!\n\n');
 
