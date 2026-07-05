@@ -5,7 +5,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=48
-#SBATCH --mem=256G
+#SBATCH --mem=192G
 #SBATCH --time=08:00:00
 #SBATCH --output=logs/matlab_100reps_n2000_%j.out
 #SBATCH --error=errors/matlab_100reps_n2000_%j.err
@@ -17,7 +17,7 @@
 # ============================================================================
 # Uses 48 cores for parallel execution
 # Expected time: 2-4 hours (larger network, more computation)
-# Increased memory to 256GB for n=2000
+# Memory: 192GB (same as n=1000, should be sufficient with parallel execution)
 # ============================================================================
 
 module load matlab
@@ -28,7 +28,7 @@ echo "Node: $(hostname)"
 echo "Job ID: $SLURM_JOB_ID"
 echo "Network size: n = 2000"
 echo "CPUs allocated: $SLURM_CPUS_PER_TASK"
-echo "Memory: 256GB"
+echo "Memory: 192GB"
 echo "Time limit: 8 hours"
 echo "========================================"
 
