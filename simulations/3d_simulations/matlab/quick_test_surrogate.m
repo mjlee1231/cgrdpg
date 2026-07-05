@@ -48,8 +48,14 @@ B = Z_true * X_true' + randn(p_cov, n);
 A_aug = A;
 A_aug(1:n+1:end) = sum(A, 2) / (n - 1);  % Set diagonal using linear indexing
 [V, D] = eig(A_aug);
-[eigvals, idx] = sort(diag(D), 'descend');
-X_ase = V(:, idx(1:d)) * diag(sqrt(abs(eigvals(1:d))));
+eigvals = diag(D);
+
+% Sort by MAGNITUDE (matching R's eigs_sym with which="LM")
+[~, idx] = sort(abs(eigvals), 'descend');
+eigvals = eigvals(idx);
+V = V(:, idx);
+
+X_ase = V(:, 1:d) * diag(sqrt(abs(eigvals(1:d))));
 
 [~, X_ase_aligned] = procrustes(X_true, X_ase);
 sse_ase = sum((X_ase_aligned(:) - X_true(:)).^2);
@@ -58,8 +64,16 @@ fprintf('ASE SSE: %.4f\n\n', sse_ase);
 
 %% Test surrogate
 fprintf('Testing surrogate likelihood...\n');
-options = optimoptions('fminunc', 'Algorithm', 'quasi-newton', ...
-    'Display', 'off', 'MaxIterations', 50, ...
+
+% R uses maxit=30, tol=0.01 (max row change)
+% fminunc doesn't have exact equivalent, so use looser tolerances
+options = optimoptions('fminunc', ...
+    'Algorithm', 'quasi-newton', ...
+    'Display', 'off', ...
+    'MaxIterations', 30, ...  % Match R's maxit
+    'OptimalityTolerance', 1e-4, ...  % Loosen from default 1e-6
+    'StepTolerance', 1e-8, ...  % Loosen from default 1e-10
+    'FunctionTolerance', 1e-6, ...
     'SpecifyObjectiveGradient', true);
 
 tic;
