@@ -218,7 +218,7 @@ cd ~/cgrdpg/simulations/3d_simulations/matlab
 bash check_hpc_matlab.sh
 ```
 
-2. **Submit the job:**
+2. **Submit the job(s):**
 
 ```bash
 # Make sure you're in the matlab directory
@@ -227,8 +227,12 @@ cd ~/cgrdpg/simulations/3d_simulations/matlab
 # Create log/error directories
 mkdir -p logs errors results
 
-# Submit to SLURM
-sbatch submit_matlab_100reps.slurm
+# Option 1: Submit both n=1000 and n=2000 (recommended)
+bash submit_both.sh
+
+# Option 2: Submit individually
+sbatch submit_matlab_100reps.slurm           # n=1000
+sbatch submit_matlab_100reps_n2000.slurm    # n=2000
 ```
 
 3. **Monitor progress:**
@@ -257,11 +261,17 @@ rsync -avz mle6@bigred200.uits.iu.edu:~/cgrdpg/simulations/3d_simulations/matlab
 
 ### HPC Job Configuration
 
-The SLURM script (`submit_matlab_100reps.slurm`) uses:
+**For n=1000** (`submit_matlab_100reps.slurm`):
 - **CPUs**: 48 cores (parallel parfor execution)
 - **Memory**: 192GB
-- **Time limit**: 4 hours (plenty of buffer)
+- **Time limit**: 4 hours
 - **Expected runtime**: 1-2 hours
+
+**For n=2000** (`submit_matlab_100reps_n2000.slurm`):
+- **CPUs**: 48 cores (parallel parfor execution)
+- **Memory**: 256GB (increased for larger network)
+- **Time limit**: 8 hours
+- **Expected runtime**: 2-4 hours
 
 ### Troubleshooting HPC
 
