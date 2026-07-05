@@ -162,7 +162,7 @@ options(bitmapType = 'cairo')
 
 p <- ggplot(sse_data, aes(x = SSE, fill = Method)) +
   geom_histogram(alpha = 0.6, position = "identity", bins = 30) +
-  facet_wrap(~ Method, ncol = 1, scales = "free_y") +
+  facet_wrap(~ Method, ncol = 1, scales = "free") +  # Free both x and y axes
   theme_bw() +
   labs(
     title = "Distribution of Sum of Squared Errors (SSE)",
