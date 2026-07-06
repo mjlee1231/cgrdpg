@@ -157,7 +157,8 @@ function [f, g] = surrogate_objective_gradient(x, A, B, S, n, d, p_cov, tau)
         W_net(1:n+1:end) = 0;  % Zero diagonal (no self-loops)
 
         % Network gradient (factor of 2 from symmetric sum, then negate for minimization)
-        grad_X_net = -2 * W_net * Y * S;
+        % Y = X * S already, so dS_ij/dx_i = y_j (do NOT multiply by S again)
+        grad_X_net = -2 * W_net * Y;
 
         % Covariate gradient (negate for minimization)
         resid_cov = B - B_pred;
