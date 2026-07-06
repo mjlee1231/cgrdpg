@@ -141,12 +141,15 @@ fprintf('  Improvement: %.1f%%\n\n', 100 * (sse_ase - sse_opt) / sse_ase);
 
 % Verify objective function
 fprintf('Objective Function Components:\n');
+fprintf('  Checking dimensions: B is %dx%d, X_opt is %dx%d, Z_opt is %dx%d\n', ...
+    size(B,1), size(B,2), size(X_opt,1), size(X_opt,2), size(Z_opt,1), size(Z_opt,2));
 Y_opt = X_opt * S;
 S_mat = X_opt * Y_opt';
 S_mat(1:n+1:end) = 0;
 [psi_val, Psi_val, ~] = psi_functions(S_mat, tau);
 net_obj = sum((A(:) - S_mat(:)) .* psi_val(:) + Psi_val(:));
-cov_obj = -0.5 * sum((B(:) - Z_opt * X_opt').^2);
+B_pred = Z_opt * X_opt';
+cov_obj = -0.5 * sum((B(:) - B_pred(:)).^2);
 total_obj = net_obj + cov_obj;
 fprintf('  Network term:   %+.6e\n', net_obj);
 fprintf('  Covariate term: %+.6e\n', cov_obj);
