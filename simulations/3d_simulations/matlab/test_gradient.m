@@ -130,15 +130,14 @@ function [f, g] = surrogate_objective_gradient(x, A, B, S, n, d, p_cov, tau)
         W_net = (A - S_mat) .* dpsi_val;
         W_net(1:n+1:end) = 0;
 
-        grad_X_net = -2 * W_net * Y * S;
+        grad_X_net = -2 * W_net * Y;
 
         resid_cov = B - B_pred;
-        grad_X_cov = resid_cov' * Z;
+        grad_X_cov = -resid_cov' * Z;
 
-        grad_X = -(grad_X_net + grad_X_cov);
+        grad_X = grad_X_net + grad_X_cov;
 
-        grad_Z = resid_cov * X;
-        grad_Z = -grad_Z;
+        grad_Z = -resid_cov * X;
 
         g = [grad_X(:); grad_Z(:)];
     end
