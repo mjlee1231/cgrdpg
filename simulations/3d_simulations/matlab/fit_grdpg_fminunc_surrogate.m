@@ -159,12 +159,12 @@ function [f, g] = surrogate_objective_gradient(x, A, B, S, n, d, p_cov, tau)
         % Network gradient (factor of 2 from symmetric sum, then negate for minimization)
         grad_X_net = -2 * W_net * Y * S;
 
-        % Covariate gradient: Z^T * (B - Z*X')
+        % Covariate gradient (negate for minimization)
         resid_cov = B - B_pred;
-        grad_X_cov = resid_cov' * Z;
+        grad_X_cov = -resid_cov' * Z;
 
-        % Total gradient for X (negate because we're minimizing)
-        grad_X = -(grad_X_net + grad_X_cov);
+        % Total gradient for X (both components already negated)
+        grad_X = grad_X_net + grad_X_cov;
 
         % Gradient w.r.t. Z
         % From covariate term only: -0.5 * d/dZ ||B - Z*X^T||^2 = (B - Z*X') * X
