@@ -139,6 +139,11 @@ function [f, g] = surrogate_objective_gradient(x, A, B, S, n, d, p_cov, tau)
 
         grad_Z = -resid_cov * X;
 
+        % Scale by (n + p_cov)
+        scale_factor = n + p_cov;
+        grad_X = grad_X / scale_factor;
+        grad_Z = grad_Z / scale_factor;
+
         g = [grad_X(:); grad_Z(:)];
     end
 end
