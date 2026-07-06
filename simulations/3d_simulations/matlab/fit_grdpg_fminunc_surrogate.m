@@ -26,6 +26,7 @@ end
 
 if nargin < 6
     % Default options for fminunc
+    % TESTING: Using numerical gradients instead of analytical
     options = optimoptions('fminunc', ...
         'Algorithm', 'quasi-newton', ...
         'Display', 'iter', ...
@@ -33,7 +34,7 @@ if nargin < 6
         'MaxFunctionEvaluations', 10000, ...
         'OptimalityTolerance', 1e-6, ...
         'StepTolerance', 1e-6, ...
-        'SpecifyObjectiveGradient', true);
+        'SpecifyObjectiveGradient', false);  % Let MATLAB compute gradient numerically
 end
 
 n = size(A, 1);
@@ -135,44 +136,46 @@ function [f, g] = surrogate_objective_gradient(x, A, B, S, n, d, p_cov, tau)
     % Total objective (we MINIMIZE, R code MAXIMIZES, so negate)
     f = -(net_obj + cov_obj);
 
+    % COMMENTED OUT: Analytical gradient (testing with numerical gradients)
     % Compute gradient if requested
-    if nargout > 1
-        % Gradient w.r.t. X
-        % The derivative of [(A_ij - S_ij) * psi(S_ij) + Psi(S_ij)] w.r.t. S_ij is:
-        % d/dS_ij = -psi(S_ij) + (A_ij - S_ij)*dpsi(S_ij) + psi(S_ij) = (A_ij - S_ij)*dpsi(S_ij)
-        %
-        % Objective sums over ALL (i,j) pairs with i≠j. Derivative w.r.t. x_i includes:
-        % - Terms where i is first index: sum_j [...] * dS_ij/dx_i
-        % - Terms where i is second index: sum_k [...] * dS_ki/dx_i
-        %
-        % Since S and A are symmetric, factor of 2:
-        % grad_X_i = 2 * sum_{j≠i} (A_ij - S_ij)*dpsi(S_ij) * sign_diag * x_j
-        %
-        % In matrix form with W = (A - S) .* dpsi(S) and diagonal = 0:
-        % grad_X = 2 * W * Y * sign_diag (maximizing)
-        % But we're MINIMIZING -f, so negate: grad_X = -2 * W * Y * S
-
-        % Compute weight matrix
-        W_net = (A - S_mat) .* dpsi_val;  % Note: psi terms cancel in derivative!
-        W_net(1:n+1:end) = 0;  % Zero diagonal (no self-loops)
-
-        % Network gradient (factor of 2 from symmetric sum, then negate for minimization)
-        % Y = X * S already, so dS_ij/dx_i = y_j (do NOT multiply by S again)
-        grad_X_net = -2 * W_net * Y;
-
-        % Covariate gradient (negate for minimization)
-        resid_cov = B - B_pred;
-        grad_X_cov = -resid_cov' * Z;
-
-        % Total gradient for X (both components already negated)
-        grad_X = grad_X_net + grad_X_cov;
-
-        % Gradient w.r.t. Z (negate for minimization)
-        % For maximizing: d/dZ[-0.5*||B - Z*X^T||^2] = (B - Z*X') * X
-        % For minimizing: negate to get -(B - Z*X') * X
-        grad_Z = -resid_cov * X;
-
-        % Pack gradient
-        g = [grad_X(:); grad_Z(:)];
-    end
+%     if nargout > 1
+%         % Gradient w.r.t. X
+%         % The derivative of [(A_ij - S_ij) * psi(S_ij) + Psi(S_ij)] w.r.t. S_ij is:
+%         % d/dS_ij = -psi(S_ij) + (A_ij - S_ij)*dpsi(S_ij) + psi(S_ij) = (A_ij - S_ij)*dpsi(S_ij)
+%         %
+%         % Objective sums over ALL (i,j) pairs with i≠j. Derivative w.r.t. x_i includes:
+%         % - Terms where i is first index: sum_j [...] * dS_ij/dx_i
+%         % - Terms where i is second index: sum_k [...] * dS_ki/dx_i
+%         %
+%         % Since S and A are symmetric, factor of 2:
+%         % grad_X_i = 2 * sum_{j≠i} (A_ij - S_ij)*dpsi(S_ij) * sign_diag * x_j
+%         %
+%         % In matrix form with W = (A - S) .* dpsi(S) and diagonal = 0:
+%         % grad_X = 2 * W * Y * sign_diag (maximizing)
+%         % But we're MINIMIZING -f, so negate: grad_X = -2 * W * Y * S
+%
+%         % Compute weight matrix
+%         W_net = (A - S_mat) .* dpsi_val;  % Note: psi terms cancel in derivative!
+%         W_net(1:n+1:end) = 0;  % Zero diagonal (no self-loops)
+%
+%         % Network gradient (negate for minimization)
+%         % Since objective sums over ALL pairs (i,j), gradient already includes both directions
+%         % NO factor of 2 needed (would be double-counting for undirected graph)
+%         grad_X_net = -W_net * Y;
+%
+%         % Covariate gradient (negate for minimization)
+%         resid_cov = B - B_pred;
+%         grad_X_cov = -resid_cov' * Z;
+%
+%         % Total gradient for X (both components already negated)
+%         grad_X = grad_X_net + grad_X_cov;
+%
+%         % Gradient w.r.t. Z (negate for minimization)
+%         % For maximizing: d/dZ[-0.5*||B - Z*X^T||^2] = (B - Z*X') * X
+%         % For minimizing: negate to get -(B - Z*X') * X
+%         grad_Z = -resid_cov * X;
+%
+%         % Pack gradient
+%         g = [grad_X(:); grad_Z(:)];
+%     end
 end
