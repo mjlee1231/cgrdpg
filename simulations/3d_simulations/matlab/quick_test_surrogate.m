@@ -3,6 +3,9 @@
 
 clear; clc;
 
+% Add core folder to path
+addpath('core');
+
 fprintf('Quick Test: Surrogate Likelihood Implementation\n');
 fprintf('================================================\n\n');
 

@@ -15,32 +15,64 @@ MATLAB's `fminunc` offers:
 4. **Superior numerical stability**: Mature optimization toolkit
 5. **Detailed diagnostics**: First-order optimality, condition numbers, etc.
 
-## Files
+## Directory Structure
 
-- `fit_grdpg_fminunc.m`: Main optimization function
-  - Initializes with ASE (Adjacency Spectral Embedding)
-  - Optimizes negative log-likelihood with gradients
-  - Returns optimized latent positions X and covariate coefficients Z
+```
+matlab/
+├── core/                                    # Core implementation
+│   ├── fit_grdpg_fminunc_surrogate.m       # Main optimization function
+│   └── psi_functions.m                      # Smoothed log-likelihood functions
+├── test_n1000_p500.m                        # Single test (n=1000, p_cov=500)
+├── test_gradient.m                          # Gradient correctness checker
+├── quick_test_surrogate.m                   # Quick test (n=500, p_cov=250)
+├── submit_test_n1000_p500.slurm            # HPC submission script
+└── [other test and legacy files]
+```
 
-- `test_3d_simulation.m`: Single replication test
-  - Generates synthetic 3D GRDPG data
-  - Compares fminunc vs ASE
-  - Saves results to `.mat` file
+## Core Files (`core/` folder)
 
-- **`run_100_replications.m`: Run 100 replications (NEW!)**
-  - Matches R simulation setup (n=1000, d=3, 100 reps)
-  - Saves summary statistics and individual replications
-  - Computes SSE for ASE and fminunc
-  - Tracks convergence and timing
+### `fit_grdpg_fminunc_surrogate.m`
+Main optimization function using surrogate log-likelihood (matches R cgrdpg package):
 
-- **`compare_matlab_vs_r.m`: Compare with R results (UPDATED!)**
-  - Loads MATLAB 100-rep results
-  - Compares with R Fisher scoring results (if available)
-  - Creates distribution plots
-  - Provides statistical comparison
+**Features:**
+- **Initialization**: ASE (Adjacency Spectral Embedding)
+- **Objective**: Surrogate log-likelihood with psi functions
+- **Optimizer**: MATLAB's fminunc with quasi-Newton
+- **Outputs**: Optimized latent positions X and covariate coefficients Z
 
-- `compare_with_r.m`: Legacy comparison script
-  - Original single-replication comparison
+**Usage:**
+```matlab
+addpath('core');
+[X_opt, Z_opt, fval, exitflag, output] = ...
+    fit_grdpg_fminunc_surrogate(A, B, d, p, tau, options);
+```
+
+### `psi_functions.m`
+Smoothed log-likelihood helper functions:
+
+- `psi(x)`: Smoothed log-odds ≈ log(x/(1-x))
+- `Psi(x)`: Integral of psi(x)
+- `dpsi(x)`: Derivative of psi(x)
+
+Uses quadratic patches for smooth extension outside [0,1].
+
+## Test Files
+
+### `test_n1000_p500.m`
+Single replication test matching R specification:
+- n=1000 nodes, p_cov=500 covariates, d=3 dimensions
+- Parametric latent curve: X = [sin(2πt)+0.6, cos(2πt)+0.6, cos(4πt)]
+- Compares ASE vs Surrogate optimization
+- Verifies objective function components
+
+### `test_gradient.m`
+Gradient correctness verification using finite differences:
+- Tests analytical gradient against numerical approximation
+- Reports max relative error
+- Critical for debugging optimization issues
+
+### `quick_test_surrogate.m`
+Fast test for development (n=500, p_cov=250)
 
 ## Quick Start
 
@@ -122,6 +154,9 @@ compare_with_r
 ### Basic usage
 
 ```matlab
+% Add core folder to path
+addpath('core');
+
 % Load your data
 A = ...; % n x n adjacency matrix
 B = ...; % p_cov x n covariate matrix
@@ -130,7 +165,8 @@ p = 2;   % positive signatures (q = d - p)
 tau = 0.001;
 
 % Fit model
-[X_opt, Z_opt, fval, exitflag, output] = fit_grdpg_fminunc(A, B, d, p, tau);
+[X_opt, Z_opt, fval, exitflag, output] = ...
+    fit_grdpg_fminunc_surrogate(A, B, d, p, tau);
 
 % Check convergence
 if exitflag > 0

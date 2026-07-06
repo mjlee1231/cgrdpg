@@ -114,6 +114,9 @@ fprintf('  Initialization: ASE (Adjacency Spectral Embedding)\n');
 fprintf('  X_init: %d x %d matrix from top %d eigenvectors\n', n, d, d);
 fprintf('  Z_init: %d x %d matrix from least squares B ~ Z*X^T\n\n', p_cov, d);
 
+% Add core folder to path
+addpath('core');
+
 tic;
 [X_opt, Z_opt, fval, exitflag, output] = ...
     fit_grdpg_fminunc_surrogate(A, B, d, p, tau, options);
