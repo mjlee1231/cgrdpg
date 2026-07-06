@@ -167,12 +167,10 @@ function [f, g] = surrogate_objective_gradient(x, A, B, S, n, d, p_cov, tau)
         % Total gradient for X (both components already negated)
         grad_X = grad_X_net + grad_X_cov;
 
-        % Gradient w.r.t. Z
-        % From covariate term only: -0.5 * d/dZ ||B - Z*X^T||^2 = (B - Z*X') * X
-        grad_Z = resid_cov * X;
-
-        % Negate because we're minimizing
-        grad_Z = -grad_Z;
+        % Gradient w.r.t. Z (negate for minimization)
+        % For maximizing: d/dZ[-0.5*||B - Z*X^T||^2] = (B - Z*X') * X
+        % For minimizing: negate to get -(B - Z*X') * X
+        grad_Z = -resid_cov * X;
 
         % Pack gradient
         g = [grad_X(:); grad_Z(:)];
