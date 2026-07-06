@@ -172,12 +172,6 @@ function [f, g] = surrogate_objective_gradient(x, A, B, S, n, d, p_cov, tau)
         % For minimizing: negate to get -(B - Z*X') * X
         grad_Z = -resid_cov * X;
 
-        % Scale gradient by (n + p_cov) to match R implementation
-        % This matches the Fisher information scaling
-        scale_factor = n + p_cov;
-        grad_X = grad_X / scale_factor;
-        grad_Z = grad_Z / scale_factor;
-
         % Pack gradient
         g = [grad_X(:); grad_Z(:)];
     end
