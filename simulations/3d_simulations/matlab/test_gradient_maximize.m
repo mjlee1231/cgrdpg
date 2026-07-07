@@ -48,7 +48,8 @@ fprintf('])\n\n');
 
 % Fix Y_hat and Z_hat (as in surrogate algorithm)
 Y_hat = X_init * S_estimated;
-Z_hat = B * X_init / (X_init' * X_init);
+% Stably solve Z_hat from: Z_hat * X_init' = B
+Z_hat = (X_init \ B')';
 
 % Pack X only (Y_hat and Z_hat are FIXED)
 x0 = X_init(:);

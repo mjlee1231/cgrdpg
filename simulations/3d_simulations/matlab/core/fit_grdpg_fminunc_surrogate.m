@@ -32,14 +32,15 @@ if nargin < 5 || isempty(tau)
 end
 
 if nargin < 6
-    % Default options for inner fminunc (quasi-Newton, silent)
+    % Default options for inner fminunc (trust-region, requires gradient)
     options = optimoptions('fminunc', ...
-        'Algorithm', 'quasi-newton', ...
+        'Algorithm', 'trust-region', ...
         'Display', 'off', ...
         'MaxIterations', 100, ...
         'OptimalityTolerance', 1e-6, ...
         'StepTolerance', 1e-10, ...
-        'SpecifyObjectiveGradient', true);
+        'SpecifyObjectiveGradient', true, ...
+        'HessianApproximation', 'lbfgs');
 end
 
 n = size(A, 1);
@@ -69,7 +70,9 @@ fprintf('%s\n', repmat('-', 1, 60));
 for outer_iter = 1:max_outer_iter
     % Fix Y_hat and Z_hat for this iteration
     Y_hat = X_current * S_estimated;
-    Z_hat = B * X_current / (X_current' * X_current);
+    % Stably solve Z_hat from: Z_hat * X_current' = B
+    % Using backslash operator to avoid ill-conditioning from X'X
+    Z_hat = (X_current \ B')';
 
     % Inner optimization: minimize over X with FIXED Y_hat, Z_hat
     x0 = X_current(:);
@@ -104,13 +107,14 @@ end
 
 % Final outputs
 X_opt = X_current;
-Z_opt = B * X_opt / (X_opt' * X_opt);
+% Stably solve Z_opt from: Z_opt * X_opt' = B
+Z_opt = (X_opt \ B')';
 
 % Create output structure
 output.iterations = outer_iter;
 output.funcCount = outer_iter * inner_output.funcCount;
 output.firstorderopt = max_row_change;  % Use max row change as optimality measure
-output.algorithm = 'Surrogate with fminunc (quasi-Newton)';
+output.algorithm = 'Surrogate with fminunc (trust-region)';
 
 fprintf('\nOptimization complete:\n');
 fprintf('  Exit flag: %d\n', exitflag);
