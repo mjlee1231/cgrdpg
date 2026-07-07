@@ -35,14 +35,25 @@ A_aug(1:n+1:end) = sum(A, 2) / (n - 1);
 [V, D] = eig(A_aug);
 eigvals = diag(D);
 [~, idx] = sort(abs(eigvals), 'descend');
-X_init = V(:, idx(1:d)) * diag(sqrt(abs(eigvals(idx(1:d)))));
-Z_init = B * X_init / (X_init' * X_init);
+eigvals_sorted = eigvals(idx);
+X_init = V(:, idx(1:d)) * diag(sqrt(abs(eigvals_sorted(1:d))));
 
-% Pack parameters
-x0 = [X_init(:); Z_init(:)];
+% Estimate signature from ASE eigenvalues
+S_estimated = diag(sign(eigvals_sorted(1:d)));
 
-% Define objective
-objective = @(x) surrogate_objective_gradient(x, A, B, S, n, d, p_cov, tau);
+fprintf('Estimated signature: S = diag([');
+fprintf('%+d ', diag(S_estimated)');
+fprintf('])\n\n');
+
+% Fix Y_hat and Z_hat (as in surrogate algorithm)
+Y_hat = X_init * S_estimated;
+Z_hat = B * X_init / (X_init' * X_init);
+
+% Pack X only (Y_hat and Z_hat are FIXED)
+x0 = X_init(:);
+
+% Define objective with FIXED Y_hat and Z_hat
+objective = @(x) surrogate_objective_gradient(x, A, B, Y_hat, Z_hat, n, d, tau);
 
 %% Test gradient with MATLAB's built-in checker
 fprintf('Testing gradient with finite differences...\n\n');
@@ -112,36 +123,61 @@ else
 end
 
 %% Nested function matching fit_grdpg_fminunc_surrogate.m
-function [f, g] = surrogate_objective_gradient(x, A, B, S, n, d, p_cov, tau)
-    X = reshape(x(1:n*d), n, d);
-    Z = reshape(x(n*d+1:end), p_cov, d);
+function [f, g] = surrogate_objective_gradient(x, A, B, Y_hat, Z_hat, n, d, tau)
+    % Compute surrogate objective and gradient with FIXED Y_hat and Z_hat
+    %
+    % Objective (Y_hat and Z_hat are FIXED parameters, NOT functions of X):
+    %   f = sum((A - X*Y_hat') .* psi(X*Y_hat') + Psi(X*Y_hat'))
+    %       - 0.5 * ||B - Z_hat*X'||_F^2
+    %
+    % Gradient:
+    %   grad_X_net = 2 * W * Y_hat  where W = (A - S_mat) .* dpsi(S_mat)
+    %   grad_X_cov = (B - Z_hat*X')' * Z_hat
+    %   grad_X = grad_X_net + grad_X_cov (for MAXIMIZING)
+    %   For MINIMIZING: negate everything
 
-    Y = X * S;
-    S_mat = X * (S * X');
+    % Unpack X
+    X = reshape(x, n, d);
+
+    % Network probabilities: S_mat(i,j) = x_i^T * y_hat_j
+    S_mat = X * Y_hat';
+    % Set diagonal to zero (no self-loops)
     S_mat(1:n+1:end) = 0;
 
+    % Compute psi and Psi values
     [psi_val, Psi_val, dpsi_val] = psi_functions(S_mat, tau);
 
+    % Network component: sum((A - S) .* psi(S) + Psi(S))
     net_obj = sum((A(:) - S_mat(:)) .* psi_val(:) + Psi_val(:));
 
-    B_pred = Z * X';
+    % Covariate component: -0.5 * ||B - Z_hat*X'||_F^2
+    B_pred = Z_hat * X';
     cov_obj = -0.5 * sum((B(:) - B_pred(:)).^2);
 
+    % Total objective (we MINIMIZE, R code MAXIMIZES, so negate)
     f = -(net_obj + cov_obj);
 
+    % Compute gradient if requested
     if nargout > 1
+        % Compute weight matrix
         W_net = (A - S_mat) .* dpsi_val;
-        W_net(1:n+1:end) = 0;
+        W_net(1:n+1:end) = 0;  % Zero diagonal (no self-loops)
 
-        grad_X_net = -W_net * Y;
+        % Network gradient (factor of 2 for symmetric graph)
+        % For MAXIMIZING: grad_X_net = 2 * W * Y_hat
+        % For MINIMIZING: negate to get -2 * W * Y_hat
+        grad_X_net = -2 * W_net * Y_hat;
 
+        % Covariate gradient
+        % For MAXIMIZING: grad_X_cov = (B - Z_hat*X')' * Z_hat
+        % For MINIMIZING: negate to get -(B - Z_hat*X')' * Z_hat
         resid_cov = B - B_pred;
-        grad_X_cov = -resid_cov' * Z;
+        grad_X_cov = -resid_cov' * Z_hat;
 
+        % Total gradient for X (both components already negated)
         grad_X = grad_X_net + grad_X_cov;
 
-        grad_Z = -resid_cov * X;
-
-        g = [grad_X(:); grad_Z(:)];
+        % Pack gradient
+        g = grad_X(:);
     end
 end

@@ -1,9 +1,16 @@
 function [X_opt, Z_opt, fval, exitflag, output] = fit_grdpg_fminunc_surrogate(A, B, d, p, tau, options)
 % FIT_GRDPG_FMINUNC_SURROGATE Fit GRDPG with surrogate likelihood (matching R implementation)
 %
-% Uses the same surrogate objective as the R cgrdpg package:
-%   Objective = sum((A - S) .* psi(S) + Psi(S)) - 0.5 * ||B - Z*X^T||^2
-% where S = X * sign_diag * X^T and psi/Psi are smoothed log-likelihood functions
+% Implements surrogate/majorization algorithm with outer iterations:
+%   1. Initialize with ASE and estimate signature matrix S from eigenvalue signs
+%   2. Outer loop (max 30 iterations, convergence on max row change < 0.01):
+%      a. Fix Y_hat = X * S and Z_hat = B * X * (X'X)^{-1}
+%      b. Optimize X with FIXED Y_hat and Z_hat using fminunc
+%      c. Check convergence: max row change < tol
+%
+% Objective (with Y_hat, Z_hat FIXED):
+%   ell(X; Y_hat, Z_hat) = sum((A - X*Y_hat') .* psi(X*Y_hat') + Psi(X*Y_hat'))
+%                          - 0.5 * ||B - Z_hat*X'||_F^2
 %
 % Inputs:
 %   A - (n x n) adjacency matrix
@@ -25,60 +32,97 @@ if nargin < 5 || isempty(tau)
 end
 
 if nargin < 6
-    % Default options for fminunc
-    % TESTING: Using numerical gradients instead of analytical
+    % Default options for inner fminunc (quasi-Newton, silent)
     options = optimoptions('fminunc', ...
         'Algorithm', 'quasi-newton', ...
-        'Display', 'iter', ...
-        'MaxIterations', 1000, ...
-        'MaxFunctionEvaluations', 10000, ...
+        'Display', 'off', ...
+        'MaxIterations', 100, ...
         'OptimalityTolerance', 1e-6, ...
-        'StepTolerance', 1e-6, ...
-        'SpecifyObjectiveGradient', false);  % Let MATLAB compute gradient numerically
+        'StepTolerance', 1e-10, ...
+        'SpecifyObjectiveGradient', true);
 end
 
 n = size(A, 1);
 p_cov = size(B, 1);
 q = d - p;
 
-% Initialize with ASE
+% Step 0: Initialize with ASE and estimate signature matrix
 fprintf('Initializing with ASE...\n');
-[X_init, Z_init] = initialize_ase(A, B, d, p);
+[X_current, S_estimated] = initialize_ase(A, d);
 
-% Signature matrix
-S = diag([ones(p, 1); -ones(q, 1)]);
+fprintf('  Estimated signature: S = diag([');
+fprintf('%+d ', diag(S_estimated)');
+fprintf('])\n');
 
-% Pack parameters into a vector for fminunc
-% Parameters: [X(:); Z(:)]
-x0 = [X_init(:); Z_init(:)];
+% Outer loop parameters
+max_outer_iter = 30;
+tol_outer = 0.01;  % Convergence tolerance on max row change
 
-fprintf('Starting fminunc optimization with surrogate objective...\n');
+% Outer loop: Surrogate optimization
+fprintf('\nStarting surrogate optimization with outer iterations...\n');
 fprintf('  Parameters: n=%d, p_cov=%d, d=%d, tau=%.6f\n', n, p_cov, d, tau);
-fprintf('  Total parameters: %d\n', length(x0));
+fprintf('  Outer iterations: max %d, tol=%.4f (max row change)\n\n', max_outer_iter, tol_outer);
 
-% Define objective function with gradient
-objective = @(x) surrogate_objective_gradient(x, A, B, S, n, d, p_cov, tau);
+fprintf('%-5s | %-15s | %-15s | %-10s\n', 'Iter', 'Objective', 'Max Row Change', 'Inner Its');
+fprintf('%s\n', repmat('-', 1, 60));
 
-% Run fminunc
-[x_opt, fval, exitflag, output] = fminunc(objective, x0, options);
+for outer_iter = 1:max_outer_iter
+    % Fix Y_hat and Z_hat for this iteration
+    Y_hat = X_current * S_estimated;
+    Z_hat = B * X_current / (X_current' * X_current);
 
-% Unpack optimized parameters
-X_opt = reshape(x_opt(1:n*d), n, d);
-Z_opt = reshape(x_opt(n*d+1:end), p_cov, d);
+    % Inner optimization: minimize over X with FIXED Y_hat, Z_hat
+    x0 = X_current(:);
+    objective = @(x) surrogate_objective_gradient(x, A, B, Y_hat, Z_hat, n, d, tau);
+
+    [x_opt, fval, inner_exitflag, inner_output] = fminunc(objective, x0, options);
+    X_new = reshape(x_opt, n, d);
+
+    % Check convergence: max row change
+    row_changes = sqrt(sum((X_new - X_current).^2, 2));
+    max_row_change = max(row_changes);
+
+    fprintf('%5d | %+15.6e | %15.6e | %10d\n', ...
+        outer_iter, -fval, max_row_change, inner_output.iterations);
+
+    % Convergence check
+    if max_row_change < tol_outer
+        fprintf('\nConverged: max row change (%.6e) < tol (%.6e)\n', max_row_change, tol_outer);
+        exitflag = 1;
+        break;
+    end
+
+    % Update for next iteration
+    X_current = X_new;
+end
+
+% Check if reached max iterations without convergence
+if outer_iter == max_outer_iter && max_row_change >= tol_outer
+    fprintf('\nReached max outer iterations (%d) without convergence\n', max_outer_iter);
+    exitflag = 0;
+end
+
+% Final outputs
+X_opt = X_current;
+Z_opt = B * X_opt / (X_opt' * X_opt);
+
+% Create output structure
+output.iterations = outer_iter;
+output.funcCount = outer_iter * inner_output.funcCount;
+output.firstorderopt = max_row_change;  % Use max row change as optimality measure
+output.algorithm = 'Surrogate with fminunc (quasi-Newton)';
 
 fprintf('\nOptimization complete:\n');
 fprintf('  Exit flag: %d\n', exitflag);
-fprintf('  Iterations: %d\n', output.iterations);
-fprintf('  Function evaluations: %d\n', output.funcCount);
-fprintf('  Final objective: %.6f\n', fval);
-fprintf('  First-order optimality: %.6e\n', output.firstorderopt);
+fprintf('  Outer iterations: %d\n', outer_iter);
+fprintf('  Final max row change: %.6e\n', max_row_change);
+fprintf('  Final objective: %.6e\n', -fval);
 
 end
 
-function [X_init, Z_init] = initialize_ase(A, B, d, p)
-    % Initialize with Adjacency Spectral Embedding
+function [X_init, S_estimated] = initialize_ase(A, d)
+    % Initialize with Adjacency Spectral Embedding and estimate signature
     n = size(A, 1);
-    p_cov = size(B, 1);
 
     % Augmented adjacency for better initialization
     A_aug = A;
@@ -95,29 +139,31 @@ function [X_init, Z_init] = initialize_ase(A, B, d, p)
     eigvals = eigvals(idx);
     V = V(:, idx);
 
+    % Estimate signature from top d eigenvalues
+    S_estimated = diag(sign(eigvals(1:d)));
+
     % Take top d eigenvectors (unsigned version: U |Lambda|^{1/2})
     X_init = V(:, 1:d) * diag(sqrt(abs(eigvals(1:d))));
-
-    % Initialize Z via least squares
-    Z_init = B * X_init / (X_init' * X_init);
 end
 
-function [f, g] = surrogate_objective_gradient(x, A, B, S, n, d, p_cov, tau)
-    % Compute surrogate objective and gradient matching R implementation
+function [f, g] = surrogate_objective_gradient(x, A, B, Y_hat, Z_hat, n, d, tau)
+    % Compute surrogate objective and gradient with FIXED Y_hat and Z_hat
     %
-    % Objective:
-    %   f = sum((A - S_mat) .* psi(S_mat) + Psi(S_mat)) - 0.5 * ||B - Z*X^T||_F^2
-    % where S_mat(i,j) = x_i^T * sign_diag * x_j
+    % Objective (Y_hat and Z_hat are FIXED parameters, NOT functions of X):
+    %   f = sum((A - X*Y_hat') .* psi(X*Y_hat') + Psi(X*Y_hat'))
+    %       - 0.5 * ||B - Z_hat*X'||_F^2
+    %
+    % Gradient:
+    %   grad_X_net = 2 * W * Y_hat  where W = (A - S_mat) .* dpsi(S_mat)
+    %   grad_X_cov = (B - Z_hat*X')' * Z_hat
+    %   grad_X = grad_X_net + grad_X_cov (for MAXIMIZING)
+    %   For MINIMIZING: negate everything
 
-    % Unpack parameters
-    X = reshape(x(1:n*d), n, d);
-    Z = reshape(x(n*d+1:end), p_cov, d);
+    % Unpack X
+    X = reshape(x, n, d);
 
-    % Compute Y = X * S (signed latent positions)
-    Y = X * S;
-
-    % Network probabilities: S_mat(i,j) = x_i^T * sign_diag * x_j
-    S_mat = X * (S * X');  % Equivalent to X * S * X'
+    % Network probabilities: S_mat(i,j) = x_i^T * y_hat_j
+    S_mat = X * Y_hat';
     % Set diagonal to zero (no self-loops)
     S_mat(1:n+1:end) = 0;
 
@@ -125,57 +171,36 @@ function [f, g] = surrogate_objective_gradient(x, A, B, S, n, d, p_cov, tau)
     [psi_val, Psi_val, dpsi_val] = psi_functions(S_mat, tau);
 
     % Network component: sum((A - S) .* psi(S) + Psi(S))
-    % R sums over ALL pairs (i,j) with i≠j, which counts each edge twice for undirected graphs
-    % We must match R's approach exactly
     net_obj = sum((A(:) - S_mat(:)) .* psi_val(:) + Psi_val(:));
 
-    % Covariate component: -0.5 * ||B - Z*X^T||_F^2
-    B_pred = Z * X';
+    % Covariate component: -0.5 * ||B - Z_hat*X'||_F^2
+    B_pred = Z_hat * X';
     cov_obj = -0.5 * sum((B(:) - B_pred(:)).^2);
 
     % Total objective (we MINIMIZE, R code MAXIMIZES, so negate)
     f = -(net_obj + cov_obj);
 
-    % COMMENTED OUT: Analytical gradient (testing with numerical gradients)
     % Compute gradient if requested
-%     if nargout > 1
-%         % Gradient w.r.t. X
-%         % The derivative of [(A_ij - S_ij) * psi(S_ij) + Psi(S_ij)] w.r.t. S_ij is:
-%         % d/dS_ij = -psi(S_ij) + (A_ij - S_ij)*dpsi(S_ij) + psi(S_ij) = (A_ij - S_ij)*dpsi(S_ij)
-%         %
-%         % Objective sums over ALL (i,j) pairs with i≠j. Derivative w.r.t. x_i includes:
-%         % - Terms where i is first index: sum_j [...] * dS_ij/dx_i
-%         % - Terms where i is second index: sum_k [...] * dS_ki/dx_i
-%         %
-%         % Since S and A are symmetric, factor of 2:
-%         % grad_X_i = 2 * sum_{j≠i} (A_ij - S_ij)*dpsi(S_ij) * sign_diag * x_j
-%         %
-%         % In matrix form with W = (A - S) .* dpsi(S) and diagonal = 0:
-%         % grad_X = 2 * W * Y * sign_diag (maximizing)
-%         % But we're MINIMIZING -f, so negate: grad_X = -2 * W * Y * S
-%
-%         % Compute weight matrix
-%         W_net = (A - S_mat) .* dpsi_val;  % Note: psi terms cancel in derivative!
-%         W_net(1:n+1:end) = 0;  % Zero diagonal (no self-loops)
-%
-%         % Network gradient (negate for minimization)
-%         % Since objective sums over ALL pairs (i,j), gradient already includes both directions
-%         % NO factor of 2 needed (would be double-counting for undirected graph)
-%         grad_X_net = -W_net * Y;
-%
-%         % Covariate gradient (negate for minimization)
-%         resid_cov = B - B_pred;
-%         grad_X_cov = -resid_cov' * Z;
-%
-%         % Total gradient for X (both components already negated)
-%         grad_X = grad_X_net + grad_X_cov;
-%
-%         % Gradient w.r.t. Z (negate for minimization)
-%         % For maximizing: d/dZ[-0.5*||B - Z*X^T||^2] = (B - Z*X') * X
-%         % For minimizing: negate to get -(B - Z*X') * X
-%         grad_Z = -resid_cov * X;
-%
-%         % Pack gradient
-%         g = [grad_X(:); grad_Z(:)];
-%     end
+    if nargout > 1
+        % Compute weight matrix
+        W_net = (A - S_mat) .* dpsi_val;
+        W_net(1:n+1:end) = 0;  % Zero diagonal (no self-loops)
+
+        % Network gradient (factor of 2 for symmetric graph)
+        % For MAXIMIZING: grad_X_net = 2 * W * Y_hat
+        % For MINIMIZING: negate to get -2 * W * Y_hat
+        grad_X_net = -2 * W_net * Y_hat;
+
+        % Covariate gradient
+        % For MAXIMIZING: grad_X_cov = (B - Z_hat*X')' * Z_hat
+        % For MINIMIZING: negate to get -(B - Z_hat*X')' * Z_hat
+        resid_cov = B - B_pred;
+        grad_X_cov = -resid_cov' * Z_hat;
+
+        % Total gradient for X (both components already negated)
+        grad_X = grad_X_net + grad_X_cov;
+
+        % Pack gradient
+        g = grad_X(:);
+    end
 end
