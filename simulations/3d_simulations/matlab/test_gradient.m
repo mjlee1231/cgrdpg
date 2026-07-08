@@ -164,12 +164,14 @@ function [f, g] = surrogate_objective_gradient(x, A, B, Y_hat, Z_hat, n, d, tau)
         W_net = (A - S_mat) .* dpsi_val;
         W_net(1:n+1:end) = 0;  % Zero diagonal (no self-loops)
 
-        % Network gradient
-        % Since S_mat = X * Y_hat' with Y_hat FIXED, only one X term contributes
-        % (NO factor of 2, unlike the quadratic form X * S * X')
-        % For MAXIMIZING: grad_X_net = W * Y_hat
-        % For MINIMIZING: negate to get -W * Y_hat
-        grad_X_net = -W_net * Y_hat;
+        % Network gradient for BATCH optimization
+        % Since we optimize ALL of X simultaneously (not row-by-row like R),
+        % changing X[i,:] affects BOTH:
+        %   1. S[i,j] = X[i,:] * Y_hat[j,:]' (row i contribution)
+        %   2. S[j,i] = X[j,:] * Y_hat[i,:]' (column i contribution, since Y_hat = X*S)
+        % This gives gradient: W * Y_hat + W' * Y_hat
+        % For MINIMIZING: negate
+        grad_X_net = -(W_net * Y_hat + W_net' * Y_hat);
 
         % Covariate gradient
         % For MAXIMIZING: grad_X_cov = (B - Z_hat*X')' * Z_hat

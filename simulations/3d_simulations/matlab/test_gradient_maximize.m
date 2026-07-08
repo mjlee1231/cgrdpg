@@ -155,8 +155,14 @@ function [f, g] = surrogate_objective_gradient_maximize(x, A, B, Y_hat, Z_hat, n
         W_net = (A - S_mat) .* dpsi_val;
         W_net(1:n+1:end) = 0;  % Zero diagonal (no self-loops)
 
-        % Network gradient (MAXIMIZING - no negation)
-        grad_X_net = W_net * Y_hat;
+        % Network gradient for BATCH optimization
+        % Since we optimize ALL of X simultaneously (not row-by-row like R),
+        % changing X[i,:] affects BOTH:
+        %   1. S[i,j] = X[i,:] * Y_hat[j,:]' (row i contribution)
+        %   2. S[j,i] = X[j,:] * Y_hat[i,:]' (column i contribution, since Y_hat = X*S)
+        % This gives gradient: W * Y_hat + W' * Y_hat
+        % MAXIMIZING - no negation
+        grad_X_net = W_net * Y_hat + W_net' * Y_hat;
 
         % Covariate gradient (MAXIMIZING - no negation)
         resid_cov = B - B_pred;
