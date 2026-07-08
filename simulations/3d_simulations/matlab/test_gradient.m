@@ -160,22 +160,25 @@ function [f, g] = surrogate_objective_gradient(x, A, B, Y_hat, Z_hat, n, d, tau)
 
     % Compute gradient if requested
     if nargout > 1
-        % Compute weight matrix
-        W_net = (A - S_mat) .* dpsi_val;
-        W_net(1:n+1:end) = 0;  % Zero diagonal (no self-loops)
+        % 1. Compute full weight matrix (including diagonal)
+        W_full = (A - S_mat) .* dpsi_val;
 
-        % Network gradient
-        % For MAXIMIZING: grad_X_net = W * Y_hat
-        % For MINIMIZING: negate
-        grad_X_net = -W_net * Y_hat;
+        % 2. Network gradient excluding diagonal contribution
+        % Match R's single node sweep by accurately excluding self-loops
+        grad_X_net = -W_full * Y_hat;
 
-        % Covariate gradient
+        % 3. Correction: Remove diagonal contribution that was incorrectly included
+        % After matrix multiplication, diagonal terms (i=j) should not contribute
+        diag_W = diag(W_full);
+        grad_X_net = grad_X_net + diag_W .* Y_hat;
+
+        % 4. Covariate gradient
         % For MAXIMIZING: grad_X_cov = (B - Z_hat*X')' * Z_hat
         % For MINIMIZING: negate to get -(B - Z_hat*X')' * Z_hat
         resid_cov = B - B_pred;
         grad_X_cov = -resid_cov' * Z_hat;
 
-        % Total gradient for X (both components already negated)
+        % 5. Total gradient for X
         grad_X = grad_X_net + grad_X_cov;
 
         % Pack gradient
