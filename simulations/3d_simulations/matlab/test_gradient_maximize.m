@@ -154,18 +154,18 @@ function [f, g] = surrogate_objective_gradient_maximize(x, A, B, Y_hat, Z_hat, n
 
     % 7. Compute gradient if requested
     if nargout > 1
-        % (1) Compute full weight matrix (including diagonal)
-        W_full = (A - S_mat) .* dpsi_val;
+        % (1) Compute weight matrix
+        W_net = (A - S_mat) .* dpsi_val;
 
-        % (2) Network gradient: Y_hat is fixed constant, coefficient is 1
-        % MAXIMIZING - no negation
-        grad_X_net = W_full * Y_hat;
+        % (2) [Key correction] Set diagonal of weight matrix to 0 first
+        % This ensures mathematical consistency with objective function that excludes diagonal
+        W_net(~is_off_diag) = 0;
 
-        % (3) Correction: Remove diagonal contribution that was incorrectly included
-        diag_W = diag(W_full);
-        grad_X_net = grad_X_net - diag_W .* Y_hat;
+        % (3) Network gradient (Y_hat is fixed constant, coefficient is 1)
+        % No need for separate diagonal correction since W_net diagonal is already 0!
+        grad_X_net = W_net * Y_hat;
 
-        % (4) Covariate gradient (MAXIMIZING - no negation)
+        % (4) Covariate gradient (MAXIMIZING - positive direction)
         resid_cov = B - B_pred;
         grad_X_cov = resid_cov' * Z_hat;
 
