@@ -128,19 +128,24 @@ end
 function [f, g] = surrogate_objective_gradient_maximize(x, A, B, Y_hat, Z_hat, n, d, tau)
     % Compute surrogate objective and gradient (MAXIMIZING version)
 
-    % Unpack X
+    % Unpack X (column-major)
     X = reshape(x, n, d);
 
     % Network probabilities: S_mat(i,j) = x_i^T * y_hat_j
     S_mat = X * Y_hat';
-    % Set diagonal to zero (no self-loops)
-    S_mat(1:n+1:end) = 0;
+    S_mat(1:n+1:end) = 0;  % Set diagonal to zero (no self-loops)
 
     % Compute psi and Psi values
     [psi_val, Psi_val, dpsi_val] = psi_functions(S_mat, tau);
 
-    % Network component: sum((A - S) .* psi(S) + Psi(S))
-    net_obj = sum((A(:) - S_mat(:)) .* psi_val(:) + Psi_val(:));
+    % Network component: sum over ALL elements first
+    net_obj_full = sum((A(:) - S_mat(:)) .* psi_val(:) + Psi_val(:));
+
+    % Correction: Remove diagonal (self-loop) contribution
+    diag_idx = 1:n+1:n^2;
+    [psi_zero, Psi_zero] = psi_functions(0, tau);
+    net_diag_contribution = sum((diag(A) - 0) * psi_zero + Psi_val(diag_idx));
+    net_obj = net_obj_full - net_diag_contribution;
 
     % Covariate component: -0.5 * ||B - Z_hat*X'||_F^2
     B_pred = Z_hat * X';

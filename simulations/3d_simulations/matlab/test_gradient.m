@@ -126,30 +126,25 @@ end
 %% Nested function matching fit_grdpg_fminunc_surrogate.m
 function [f, g] = surrogate_objective_gradient(x, A, B, Y_hat, Z_hat, n, d, tau)
     % Compute surrogate objective and gradient with FIXED Y_hat and Z_hat
-    %
-    % Objective (Y_hat and Z_hat are FIXED parameters, NOT functions of X):
-    %   f = sum((A - X*Y_hat') .* psi(X*Y_hat') + Psi(X*Y_hat'))
-    %       - 0.5 * ||B - Z_hat*X'||_F^2
-    %
-    % Gradient:
-    %   grad_X_net = 2 * W * Y_hat  where W = (A - S_mat) .* dpsi(S_mat)
-    %   grad_X_cov = (B - Z_hat*X')' * Z_hat
-    %   grad_X = grad_X_net + grad_X_cov (for MAXIMIZING)
-    %   For MINIMIZING: negate everything
 
-    % Unpack X
+    % Unpack X (column-major)
     X = reshape(x, n, d);
 
     % Network probabilities: S_mat(i,j) = x_i^T * y_hat_j
     S_mat = X * Y_hat';
-    % Set diagonal to zero (no self-loops)
-    S_mat(1:n+1:end) = 0;
+    S_mat(1:n+1:end) = 0;  % Set diagonal to zero (no self-loops)
 
     % Compute psi and Psi values
     [psi_val, Psi_val, dpsi_val] = psi_functions(S_mat, tau);
 
-    % Network component: sum((A - S) .* psi(S) + Psi(S))
-    net_obj = sum((A(:) - S_mat(:)) .* psi_val(:) + Psi_val(:));
+    % Network component: sum over ALL elements first
+    net_obj_full = sum((A(:) - S_mat(:)) .* psi_val(:) + Psi_val(:));
+
+    % Correction: Remove diagonal (self-loop) contribution
+    diag_idx = 1:n+1:n^2;
+    [psi_zero, Psi_zero] = psi_functions(0, tau);
+    net_diag_contribution = sum((diag(A) - 0) * psi_zero + Psi_val(diag_idx));
+    net_obj = net_obj_full - net_diag_contribution;
 
     % Covariate component: -0.5 * ||B - Z_hat*X'||_F^2
     B_pred = Z_hat * X';
