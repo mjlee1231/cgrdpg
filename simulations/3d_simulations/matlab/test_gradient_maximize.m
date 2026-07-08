@@ -127,56 +127,52 @@ end
 %% MAXIMIZING version - no negation
 function [f, g] = surrogate_objective_gradient_maximize(x, A, B, Y_hat, Z_hat, n, d, tau)
     % Compute surrogate objective and gradient (MAXIMIZING version)
+    % Using logical masking to cleanly exclude self-loops
 
-    % Unpack X (column-major)
+    % 1. Unpack X (column-major)
     X = reshape(x, n, d);
 
-    % Network probabilities: S_mat(i,j) = x_i^T * y_hat_j
+    % 2. Network probabilities (keep diagonal values, don't set to 0)
     S_mat = X * Y_hat';
-    S_mat(1:n+1:end) = 0;  % Set diagonal to zero (no self-loops)
 
-    % Compute psi and Psi values
+    % Create off-diagonal mask
+    is_off_diag = ~eye(n);
+
+    % 3. Compute psi and Psi values
     [psi_val, Psi_val, dpsi_val] = psi_functions(S_mat, tau);
 
-    % Network component: sum over ALL elements first
-    net_obj_full = sum((A(:) - S_mat(:)) .* psi_val(:) + Psi_val(:));
+    % 4. Network component calculation
+    % Use masking to exclude diagonal (self-loop) from summation
+    net_obj = sum(A(is_off_diag) .* psi_val(is_off_diag) + Psi_val(is_off_diag));
 
-    % Correction: Remove diagonal (self-loop) contribution
-    diag_idx = 1:n+1:n^2;
-    [psi_zero, Psi_zero] = psi_functions(0, tau);
-    net_diag_contribution = sum((diag(A) - 0) * psi_zero + Psi_val(diag_idx));
-    net_obj = net_obj_full - net_diag_contribution;
-
-    % Covariate component: -0.5 * ||B - Z_hat*X'||_F^2
+    % 5. Covariate component: -0.5 * ||B - Z_hat*X'||_F^2
     B_pred = Z_hat * X';
     cov_obj = -0.5 * sum((B(:) - B_pred(:)).^2);
 
-    % Total objective (MAXIMIZING - no negation)
+    % 6. Total objective (MAXIMIZING - no negation)
     f = (net_obj + cov_obj);
 
-    % Compute gradient if requested
+    % 7. Compute gradient if requested
     if nargout > 1
-        % 1. Compute full weight matrix (including diagonal)
+        % (1) Compute full weight matrix (including diagonal)
         W_full = (A - S_mat) .* dpsi_val;
 
-        % 2. Network gradient excluding diagonal contribution
-        % Match R's single node sweep by accurately excluding self-loops
+        % (2) Network gradient: Y_hat is fixed constant, coefficient is 1
         % MAXIMIZING - no negation
         grad_X_net = W_full * Y_hat;
 
-        % 3. Correction: Remove diagonal contribution that was incorrectly included
-        % After matrix multiplication, diagonal terms (i=j) should not contribute
+        % (3) Correction: Remove diagonal contribution that was incorrectly included
         diag_W = diag(W_full);
         grad_X_net = grad_X_net - diag_W .* Y_hat;
 
-        % 4. Covariate gradient (MAXIMIZING - no negation)
+        % (4) Covariate gradient (MAXIMIZING - no negation)
         resid_cov = B - B_pred;
         grad_X_cov = resid_cov' * Z_hat;
 
-        % 5. Total gradient for X
+        % (5) Total gradient
         grad_X = grad_X_net + grad_X_cov;
 
-        % Pack gradient
+        % Pack gradient (column-major)
         g = grad_X(:);
     end
 end
