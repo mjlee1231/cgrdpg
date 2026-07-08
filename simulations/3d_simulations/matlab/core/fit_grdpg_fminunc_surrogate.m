@@ -196,8 +196,10 @@ function [f, g] = surrogate_objective_gradient(x, A, B, Y_hat, Z_hat, n, d, tau)
         %   1. S[i,j] = X[i,:] * Y_hat[j,:]' (row i contribution)
         %   2. S[j,i] = X[j,:] * Y_hat[i,:]' (column i contribution, since Y_hat = X*S)
         % This gives gradient: W * Y_hat + W' * Y_hat
+        % Since W is symmetric (A and S_mat are symmetric), W' = W, so:
+        % grad_X = W * Y_hat + W * Y_hat = 2 * W * Y_hat
         % For MINIMIZING: negate
-        grad_X_net = -(W_net * Y_hat + W_net' * Y_hat);
+        grad_X_net = -2 * W_net * Y_hat;
 
         % Covariate gradient
         % For MAXIMIZING: grad_X_cov = (B - Z_hat*X')' * Z_hat
