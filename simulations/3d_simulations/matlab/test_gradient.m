@@ -165,8 +165,8 @@ function [f, g] = surrogate_objective_gradient(x, A, B, Y_hat, Z_hat, n, d, tau)
         grad_X_net = -W_net * Y_hat;
 
         % (4) Covariate gradient (MINIMIZING - negative direction)
-        resid_cov = B - B_pred;
-        grad_X_cov = -resid_cov' * Z_hat;
+        % d/dX[-0.5 * ||B - Z_hat*X'||_F^2] with negation for minimization
+        grad_X_cov = -(B - B_pred)' * Z_hat;
 
         % (5) Total gradient
         grad_X = grad_X_net + grad_X_cov;

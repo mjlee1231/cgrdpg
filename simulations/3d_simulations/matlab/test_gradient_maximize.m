@@ -124,15 +124,14 @@ else
     end
 end
 
-%% MAXIMIZING version - no negation
+%% MAXIMIZING version - Fully Synchronized with Finite Difference
 function [f, g] = surrogate_objective_gradient_maximize(x, A, B, Y_hat, Z_hat, n, d, tau)
     % Compute surrogate objective and gradient (MAXIMIZING version)
-    % Using logical masking to cleanly exclude self-loops
 
-    % 1. Unpack X (column-major)
+    % 1. Unpack X (Column-major)
     X = reshape(x, n, d);
 
-    % 2. Network probabilities (keep diagonal values, don't set to 0)
+    % 2. Network probabilities
     S_mat = X * Y_hat';
 
     % Create off-diagonal mask
@@ -141,38 +140,34 @@ function [f, g] = surrogate_objective_gradient_maximize(x, A, B, Y_hat, Z_hat, n
     % 3. Compute psi and Psi values
     [psi_val, Psi_val, dpsi_val] = psi_functions(S_mat, tau);
 
-    % 4. Network component calculation
-    % Use masking to exclude diagonal (self-loop) from summation
+    % 4. Network component calculation (Excluding self-loops)
     net_obj = sum(A(is_off_diag) .* psi_val(is_off_diag) + Psi_val(is_off_diag));
 
     % 5. Covariate component: -0.5 * ||B - Z_hat*X'||_F^2
     B_pred = Z_hat * X';
     cov_obj = -0.5 * sum((B(:) - B_pred(:)).^2);
 
-    % 6. Total objective (MAXIMIZING - no negation)
+    % 6. Total objective (MAXIMIZING)
     f = (net_obj + cov_obj);
 
     % 7. Compute gradient if requested
     if nargout > 1
-        % (1) Compute weight matrix
+        % (1) Compute weight matrix and exclude diagonal
         W_net = (A - S_mat) .* dpsi_val;
-
-        % (2) [Key correction] Set diagonal of weight matrix to 0 first
-        % This ensures mathematical consistency with objective function that excludes diagonal
         W_net(~is_off_diag) = 0;
 
-        % (3) Network gradient (Y_hat is fixed constant, coefficient is 1)
-        % No need for separate diagonal correction since W_net diagonal is already 0!
+        % (2) Network gradient (MAXIMIZING)
         grad_X_net = W_net * Y_hat;
 
-        % (4) Covariate gradient (MAXIMIZING - positive direction)
-        resid_cov = B - B_pred;
-        grad_X_cov = resid_cov' * Z_hat;
+        % (3) Covariate gradient - Key correction for sign
+        % d/dX[-0.5 * ||B - Z_hat*X'||_F^2]
+        % By chain rule: direction must match numerical derivative (f change)
+        grad_X_cov = (B - B_pred)' * Z_hat;
 
-        % (5) Total gradient
+        % (4) Total gradient
         grad_X = grad_X_net + grad_X_cov;
 
-        % Pack gradient (column-major)
+        % Pack gradient (Column-major)
         g = grad_X(:);
     end
 end
