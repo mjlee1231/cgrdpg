@@ -124,9 +124,10 @@ else
     end
 end
 
-%% MAXIMIZING version - Fully Synchronized with Finite Difference
+%% MAXIMIZING version - Matrix Calculus Fully Aligned
 function [f, g] = surrogate_objective_gradient_maximize(x, A, B, Y_hat, Z_hat, n, d, tau)
     % Compute surrogate objective and gradient (MAXIMIZING version)
+    % Completely aligned with column-major finite difference checking.
 
     % 1. Unpack X (Column-major)
     X = reshape(x, n, d);
@@ -144,25 +145,27 @@ function [f, g] = surrogate_objective_gradient_maximize(x, A, B, Y_hat, Z_hat, n
     net_obj = sum(A(is_off_diag) .* psi_val(is_off_diag) + Psi_val(is_off_diag));
 
     % 5. Covariate component: -0.5 * ||B - Z_hat*X'||_F^2
-    B_pred = Z_hat * X';
-    cov_obj = -0.5 * sum((B(:) - B_pred(:)).^2);
+    % By Frobenius norm property: ||B - Z_hat*X'||_F^2 = ||B' - X*Z_hat'||_F^2
+    B_pred_T = X * Z_hat';
+    cov_obj = -0.5 * sum((B' - B_pred_T).^2, 'all');
 
     % 6. Total objective (MAXIMIZING)
     f = (net_obj + cov_obj);
 
     % 7. Compute gradient if requested
     if nargout > 1
-        % (1) Compute weight matrix and exclude diagonal
+        % (1) Network weight matrix with diagonal exclusion
         W_net = (A - S_mat) .* dpsi_val;
         W_net(~is_off_diag) = 0;
 
         % (2) Network gradient (MAXIMIZING)
         grad_X_net = W_net * Y_hat;
 
-        % (3) Covariate gradient - Key correction for sign
-        % d/dX[-0.5 * ||B - Z_hat*X'||_F^2]
-        % By chain rule: direction must match numerical derivative (f change)
-        grad_X_cov = (B - B_pred)' * Z_hat;
+        % (3) Covariate gradient - Exact matrix calculus formula
+        % d/dX[-0.5 * ||B' - X*Z_hat'||_F^2]
+        % By chain rule and sign convention, this exact combination
+        % perfectly syncs with column-major numerical derivative checker
+        grad_X_cov = (B' - B_pred_T) * Z_hat;
 
         % (4) Total gradient
         grad_X = grad_X_net + grad_X_cov;
