@@ -1,3 +1,4 @@
+function test_gradient_maximize()
 % TEST_GRADIENT_MAXIMIZE Main entry function to test gradient correctness
 % Wrapping the script into a function prevents MATLAB from messing up input arguments.
 
@@ -130,7 +131,7 @@ else
     end
 end
 
-end % End of main function test_gradient_maximize
+end % 1. 여기가 메인 함수(test_gradient_maximize)의 끝입니다.
 
 
 %% MAXIMIZING version - Fully Aligned with Paper Notations
@@ -164,9 +165,7 @@ function [f, g] = surrogate_objective_gradient_maximize(x, A, B, Y_hat, Z_hat, n
         W_net = (A - S_mat) .* dpsi_val;
         W_net(~is_off_diag) = 0;
 
-        % [최종 스케일 교정] 대칭 인접 행렬 구조 하에서
-        % fminunc의 독립 변수 미세 변형량과 대수적으로 일치시키기 위해
-        % 행/열 양방향 전개 성분을 결합한 계수 '2'가 반영되어야 합니다.
+        % 대칭 인접 행렬 및 배취 미분 변형량을 완벽히 동기화한 스케일 계수 '2' 반영
         grad_X_net = 2 * (W_net * Y_hat);
 
         % Covariate gradient (Exact Matrix Calculus for MAXIMIZING)
@@ -178,5 +177,4 @@ function [f, g] = surrogate_objective_gradient_maximize(x, A, B, Y_hat, Z_hat, n
         % Pack gradient (Column-major)
         g = grad_X(:);
     end
-end
-
+end % 2. 여기가 하위 최적화 함수의 끝입니다.
