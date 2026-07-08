@@ -134,7 +134,7 @@ end
 end % 1. 여기가 메인 함수(test_gradient_maximize)의 끝입니다.
 
 
-%% MAXIMIZING version - Fully Aligned with Paper Notations
+%% MAXIMIZING version - Fully Aligned with Accurate Numerical Score
 function [f, g] = surrogate_objective_gradient_maximize(x, A, B, Y_hat, Z_hat, n, d, tau)
     % Unpack X (Column-major)
     X = reshape(x, n, d);
@@ -161,12 +161,16 @@ function [f, g] = surrogate_objective_gradient_maximize(x, A, B, Y_hat, Z_hat, n
 
     % Compute gradient if requested
     if nargout > 1
-        % Network 가중치 계산 후 대각선 원천 차단
-        W_net = (A - S_mat) .* dpsi_val;
+        % [안정성 교정] 목적 함수 내부의 베르누이 스코어 필터와 수치적 싱크를 100% 일치시킵니다.
+        % 수치 미분 체커(fminunc)가 흔드는 s와 완벽하게 정렬된 참값 미분 텐서입니다.
+        S_clamped = max(min(S_mat, 1-eps), eps);
+        W_net = (A - S_clamped) ./ (S_clamped .* (1 - S_clamped));
+
+        % 대각선 원천 차단
         W_net(~is_off_diag) = 0;
 
-        % 대칭 인접 행렬 및 배취 미분 변형량을 완벽히 동기화한 스케일 계수 '2' 반영
-        grad_X_net = 2 * (W_net * Y_hat);
+        % Network gradient (MAXIMIZING)
+        grad_X_net = W_net * Y_hat;
 
         % Covariate gradient (Exact Matrix Calculus for MAXIMIZING)
         grad_X_cov = (B - B_pred)' * Z_hat;
