@@ -107,7 +107,8 @@ check_coverage <- function(err, Prec, scale = 1.0) {
 #  SINGLE REPLICATION
 # ============================================================================
 rep_start <- Sys.time()
-set.seed(598 + rep_id)
+set.seed(seed = 20250401)
+#set.seed(598 + rep_id)
 ncores <- as.integer(Sys.getenv("SLURM_CPUS_PER_TASK", "1"))
 if (ncores <= 1) ncores <- max(1, parallel::detectCores() - 1)
 cat(sprintf("Using %d cores for cgrdpg parallel fitting\n\n", ncores))
