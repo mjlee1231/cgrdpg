@@ -228,11 +228,13 @@ function [f, g, H] = surrogate_objective_gradient(x, A, B, Y_hat, Z_hat, n, d, t
             ddpsi_i(i) = 0;  % Exclude diagonal
 
             % Diagonal block: Y_hat^T * diag(ddpsi_i) * Y_hat
-            H_net_block = Y_hat' * (Y_hat .* ddpsi_i);
+            % ddpsi_i contains negative values (2nd derivative of log is -1/x^2)
+            % Negate to make H_net_block positive definite for minimization
+            H_net_block = -Y_hat' * (Y_hat .* ddpsi_i);
 
             % Total Hessian block
-            % Note: f = -(net_obj + cov_obj) already negated
-            % So Hessian should NOT be negated again
+            % Both H_net_block (now positive) and ZtZ (positive) combine
+            % to form a positive definite Hessian for minimization
             H_block = H_net_block + ZtZ;
 
             % Assign to full Hessian
