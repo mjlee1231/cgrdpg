@@ -180,22 +180,18 @@ function [f, g, H] = surrogate_objective_gradient(x, A, B, Y_hat, Z_hat, n, d, t
 
     % 7. Compute gradient if requested
     if nargout > 1
-        % (1) Compute weight matrix
-        W_net = (A - S_mat) .* dpsi_val;
+        % (1) Core weight matrix computation
+        W_core = (A - S_mat) .* dpsi_val;
+        W_core(~is_off_diag) = 0;  % Exclude diagonal
 
-        % (2) [Key correction] Set diagonal of weight matrix to 0 first
-        % This ensures mathematical consistency with objective function that excludes diagonal
-        W_net(~is_off_diag) = 0;
+        % (2) Account for symmetric network structure
+        % Sum contributions from both row and column
+        W_net = W_core + W_core';
 
-        % (3) Network gradient (Y_hat is fixed constant, coefficient is 1)
-        % MINIMIZING - negate
+        % (3) Network gradient (MINIMIZING - negate)
         grad_X_net = -W_net * Y_hat;
 
-        % (4) Covariate gradient - Exact matrix calculus formula
-        % d/dX[-0.5 * ||B' - X*Z_hat'||_F^2]
-        % By chain rule and sign convention, this exact combination
-        % perfectly syncs with column-major numerical derivative checker
-        % MINIMIZING - negate
+        % (4) Covariate gradient (MINIMIZING - negate)
         grad_X_cov = -(B' - B_pred_T) * Z_hat;
 
         % (5) Total gradient
