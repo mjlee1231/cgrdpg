@@ -216,8 +216,8 @@ function [f, g, H] = surrogate_objective_gradient(x, A, B, Y_hat, Z_hat, n, d, t
         ZtZ = Z_hat' * Z_hat;
 
         for i = 1:n
-            % Block indices for vertex i
-            idx = (i-1)*d + (1:d);
+            % Block indices for vertex i (Column-major: i, n+i, 2n+i, ..., (d-1)n+i)
+            idx = i:n:(d-1)*n+i;
 
             % Network Hessian block (diagonal block for vertex i)
             % H_net[i,i] = -Y_hat^T * diag(ddpsi(S[i,:])) * Y_hat
@@ -230,9 +230,10 @@ function [f, g, H] = surrogate_objective_gradient(x, A, B, Y_hat, Z_hat, n, d, t
             % Diagonal block: Y_hat^T * diag(ddpsi_i) * Y_hat
             H_net_block = Y_hat' * (Y_hat .* ddpsi_i);
 
-            % Total Hessian block (MINIMIZING - negate)
-            % H = -(H_net + H_cov)
-            H_block = -(H_net_block + ZtZ);
+            % Total Hessian block
+            % Note: f = -(net_obj + cov_obj) already negated
+            % So Hessian should NOT be negated again
+            H_block = H_net_block + ZtZ;
 
             % Assign to full Hessian
             H(idx, idx) = H_block;
