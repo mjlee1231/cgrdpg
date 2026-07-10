@@ -226,14 +226,18 @@ function [f, g, H] = surrogate_objective_gradient(x, A, B, Y_hat, Z_hat, n, d, t
             [~, ~, dpsi_i] = psi_functions(s_i_clipped, tau);
             dpsi_i(i) = 0;  % Exclude self-loop
 
-            % Fisher information block: Y^T * diag(dpsi) * Y
+            % Fisher information block: I = Y^T * diag(dpsi) * Y
             I_net_block = Y_hat' * (Y_hat .* dpsi_i);
 
             % Total Fisher information: I = Y^T*diag(dpsi)*Y + Z^T*Z
             I_block = I_net_block + ZtZ;
 
+            % For minimization f = -L, Hessian H_f = -H_L
+            % Since Fisher information I = -E[H_L], we need H_f = -I
+            H_block = -I_block;
+
             % Assign to full matrix
-            H(idx, idx) = I_block;
+            H(idx, idx) = H_block;
         end
 
         % Note: Off-diagonal blocks are neglected in this approximation
