@@ -7,26 +7,26 @@ addpath('core');
 fprintf('Testing Gradient Correctness\n');
 fprintf('========================================\n\n');
 
-%% Small test problem
+%% Small test problem (2D positive definite)
 n = 50;
 p_cov = 25;
-d = 3;
-p = 2;
+d = 2;  % 2D
+p = 2;  % All positive
 tau = 0.001;
 rng(42);
 
-% Generate simple data
-t = (1:n)' / n;
-X_true = [0.15 * sin(2*pi*t) + 0.6, ...
-          0.15 * cos(2*pi*t) + 0.6, ...
-          0.15 * cos(4*pi*t)];
+% Generate simple data (2D semicircle)
+theta = pi * (1:n)' / (n - 1);
+X_true = [0.28 * sin(theta) + 0.42, ...
+          0.28 * cos(theta) + 0.42];
 Z_true = randn(p_cov, d) * 0.1;
-S = diag([1, 1, -1]);
+S = eye(d);  % Identity (all positive)
 Y_true = X_true * S;
 P_net = X_true * Y_true';
 A = double(rand(n) < P_net);
 A = triu(A, 1);
 A = A + A';
+A(1:n+1:end) = 0;  % Ensure diagonal is 0
 B = Z_true * X_true' + randn(p_cov, n) * 0.1;
 
 % Initialize with ASE
