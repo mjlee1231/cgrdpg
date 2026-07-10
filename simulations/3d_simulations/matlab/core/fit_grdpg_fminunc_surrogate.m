@@ -32,7 +32,7 @@ if nargin < 5 || isempty(tau)
 end
 
 if nargin < 6
-    % Default options for inner fminunc (trust-region, requires gradient)
+    % Default options for inner fminunc (trust-region, requires gradient and Hessian)
     options = optimoptions('fminunc', ...
         'Algorithm', 'trust-region', ...
         'Display', 'off', ...
@@ -40,7 +40,7 @@ if nargin < 6
         'OptimalityTolerance', 1e-6, ...
         'StepTolerance', 1e-10, ...
         'SpecifyObjectiveGradient', true, ...
-        'HessianApproximation', 'lbfgs');
+        'HessianFcn', 'objective');  % Use exact Hessian from objective function
 end
 
 n = size(A, 1);
@@ -150,8 +150,8 @@ function [X_init, S_estimated] = initialize_ase(A, d)
     X_init = V(:, 1:d) * diag(sqrt(abs(eigvals(1:d))));
 end
 
-function [f, g] = surrogate_objective_gradient(x, A, B, Y_hat, Z_hat, n, d, tau)
-    % Compute surrogate objective and gradient with FIXED Y_hat and Z_hat
+function [f, g, H] = surrogate_objective_gradient(x, A, B, Y_hat, Z_hat, n, d, tau)
+    % Compute surrogate objective, gradient, and Hessian with FIXED Y_hat and Z_hat
     % Using logical masking to cleanly exclude self-loops
 
     % 1. Unpack X (column-major)
@@ -164,7 +164,7 @@ function [f, g] = surrogate_objective_gradient(x, A, B, Y_hat, Z_hat, n, d, tau)
     is_off_diag = ~eye(n);
 
     % 3. Compute psi and Psi values
-    [psi_val, Psi_val, dpsi_val] = psi_functions(S_mat, tau);
+    [psi_val, Psi_val, dpsi_val, ddpsi_val] = psi_functions(S_mat, tau);
 
     % 4. Network component calculation
     % Use masking to exclude diagonal (self-loop) from summation
@@ -203,5 +203,42 @@ function [f, g] = surrogate_objective_gradient(x, A, B, Y_hat, Z_hat, n, d, tau)
 
         % Pack gradient (column-major)
         g = grad_X(:);
+    end
+
+    % 8. Compute Hessian if requested
+    if nargout > 2
+        % Compute Hessian using Fisher information (block diagonal approximation)
+        % Full Hessian is (n*d) × (n*d), but we use block diagonal structure
+
+        H = zeros(n*d, n*d);
+
+        % Covariate Hessian contribution (constant for all blocks)
+        ZtZ = Z_hat' * Z_hat;
+
+        for i = 1:n
+            % Block indices for vertex i
+            idx = (i-1)*d + (1:d);
+
+            % Network Hessian block (diagonal block for vertex i)
+            % H_net[i,i] = -Y_hat^T * diag(ddpsi(S[i,:])) * Y_hat
+            % But ddpsi should use clamped S for numerical stability
+            s_i = S_mat(i, :)';
+            s_i_clipped = max(min(s_i, 1 - tau), tau);
+            [~, ~, ~, ddpsi_i] = psi_functions(s_i_clipped, tau);
+            ddpsi_i(i) = 0;  % Exclude diagonal
+
+            % Diagonal block: Y_hat^T * diag(ddpsi_i) * Y_hat
+            H_net_block = Y_hat' * (Y_hat .* ddpsi_i);
+
+            % Total Hessian block (MINIMIZING - negate)
+            % H = -(H_net + H_cov)
+            H_block = -(H_net_block + ZtZ);
+
+            % Assign to full Hessian
+            H(idx, idx) = H_block;
+        end
+
+        % Note: Off-diagonal blocks are neglected in this approximation
+        % (block diagonal Hessian, similar to Gauss-Seidel approach)
     end
 end

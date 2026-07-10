@@ -1,4 +1,4 @@
-function [psi_val, Psi_val, dpsi_val] = psi_functions(x, tau)
+function [psi_val, Psi_val, dpsi_val, ddpsi_val] = psi_functions(x, tau)
 % PSI_FUNCTIONS Compute smoothed log-likelihood functions for GRDPG
 %
 % Inputs:
@@ -9,6 +9,7 @@ function [psi_val, Psi_val, dpsi_val] = psi_functions(x, tau)
 %   psi_val - psi(x) = psi1(x) - psi2(x) ≈ log(x/(1-x))
 %   Psi_val - Psi(x) = integral of psi(x)
 %   dpsi_val - derivative of psi(x) ≈ 1/x + 1/(1-x)
+%   ddpsi_val - second derivative of psi(x) ≈ -1/x² + 1/(1-x)²
 %
 % These functions provide a smooth, twice-differentiable extension
 % of the Bernoulli log-likelihood outside [0,1] using quadratic patches
@@ -30,11 +31,18 @@ if nargout > 1
     Psi_val = Psi1_val - Psi2_val;
 end
 
-% dpsi(x): derivative
+% dpsi(x): first derivative
 if nargout > 2
     dpsi1_val = dpsi1(x, tau);
     dpsi2_val = dpsi2(x, tau);
     dpsi_val = dpsi1_val - dpsi2_val;
+end
+
+% ddpsi(x): second derivative
+if nargout > 3
+    ddpsi1_val = ddpsi1(x, tau);
+    ddpsi2_val = ddpsi2(x, tau);
+    ddpsi_val = ddpsi1_val - ddpsi2_val;
 end
 
 end
@@ -132,4 +140,29 @@ function out = Psi2(x, tau)
         Clog = -(1 - s) * log(tau) - s;  % since 1-s = tau
         out(~idx) = Clog + (Q(x(~idx)) - Q(s));
     end
+end
+
+function out = ddpsi1(x, tau)
+    % Second derivative of psi1
+    % For x < tau: psi1 = a*x^2 + b*x + c, so ddpsi1 = 2*a = -1/tau^2
+    % For x >= tau: psi1 = log(x), so ddpsi1 = -1/x^2
+    a = -1/(2*tau^2);
+
+    out = zeros(size(x));
+    idx = (x < tau);
+    out(idx) = 2*a;  % Constant: -1/tau^2
+    out(~idx) = -1 ./ max(x(~idx), eps).^2;
+end
+
+function out = ddpsi2(x, tau)
+    % Second derivative of psi2
+    % For x > 1-tau: psi2 = a*x^2 + b*x + c, so ddpsi2 = 2*a = -1/tau^2
+    % For x <= 1-tau: psi2 = log(1-x), so ddpsi2 = -1/(1-x)^2
+    s = 1 - tau;
+    a = -1/(2*tau^2);
+
+    out = zeros(size(x));
+    idx = (x > s);
+    out(idx) = 2*a;  % Constant: -1/tau^2
+    out(~idx) = -1 ./ max(1 - x(~idx), eps).^2;
 end
