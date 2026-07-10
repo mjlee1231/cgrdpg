@@ -219,26 +219,21 @@ function [f, g, H] = surrogate_objective_gradient(x, A, B, Y_hat, Z_hat, n, d, t
             % Block indices for vertex i (Column-major: i, n+i, 2n+i, ..., (d-1)n+i)
             idx = i:n:(d-1)*n+i;
 
-            % Network Hessian block (diagonal block for vertex i)
-            % H_net[i,i] = -Y_hat^T * diag(ddpsi(S[i,:])) * Y_hat
-            % But ddpsi should use clamped S for numerical stability
+            % Fisher information block (using dpsi, not ddpsi)
+            % Fisher information = -E[Hessian], uses first derivative dpsi
             s_i = S_mat(i, :)';
             s_i_clipped = max(min(s_i, 1 - tau), tau);
-            [~, ~, ~, ddpsi_i] = psi_functions(s_i_clipped, tau);
-            ddpsi_i(i) = 0;  % Exclude diagonal
+            [~, ~, dpsi_i] = psi_functions(s_i_clipped, tau);
+            dpsi_i(i) = 0;  % Exclude self-loop
 
-            % Diagonal block: Y_hat^T * diag(ddpsi_i) * Y_hat
-            % ddpsi_i contains negative values (2nd derivative of log is -1/x^2)
-            % Negate to make H_net_block positive definite for minimization
-            H_net_block = -Y_hat' * (Y_hat .* ddpsi_i);
+            % Fisher information block: Y^T * diag(dpsi) * Y
+            I_net_block = Y_hat' * (Y_hat .* dpsi_i);
 
-            % Total Hessian block
-            % Both H_net_block (now positive) and ZtZ (positive) combine
-            % to form a positive definite Hessian for minimization
-            H_block = H_net_block + ZtZ;
+            % Total Fisher information: I = Y^T*diag(dpsi)*Y + Z^T*Z
+            I_block = I_net_block + ZtZ;
 
-            % Assign to full Hessian
-            H(idx, idx) = H_block;
+            % Assign to full matrix
+            H(idx, idx) = I_block;
         end
 
         % Note: Off-diagonal blocks are neglected in this approximation
