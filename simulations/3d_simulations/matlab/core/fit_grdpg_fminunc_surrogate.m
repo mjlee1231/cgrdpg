@@ -168,7 +168,7 @@ function [f, g, H] = surrogate_objective_gradient(x, A, B, Y_hat, Z_hat, n, d, t
 
     % 4. Network component calculation
     % Use masking to exclude diagonal (self-loop) from summation
-    net_obj = sum(A(is_off_diag) .* psi_val(is_off_diag) + Psi_val(is_off_diag));
+    net_obj = sum((A(is_off_diag) - S_mat(is_off_diag)) .* psi_val(is_off_diag) + Psi_val(is_off_diag));
 
     % 5. Covariate component: -0.5 * ||B - Z_hat*X'||_F^2
     B_pred = Z_hat * X';  % (p_cov x n)
@@ -183,7 +183,7 @@ function [f, g, H] = surrogate_objective_gradient(x, A, B, Y_hat, Z_hat, n, d, t
         W_core = (A - S_mat) .* dpsi_val;
         W_core(~is_off_diag) = 0;  % Exclude diagonal
 
-        % (2) Network gradient weight matrix (no double counting)
+        % (2) Network gradient weight matrix
         W_net = W_core;
 
         % (3) Network gradient (MINIMIZING - negate)
