@@ -184,7 +184,9 @@ function [f, g, H] = surrogate_objective_gradient(x, A, B, Y_hat, Z_hat, n, d, t
         W_core(~is_off_diag) = 0;  % Exclude diagonal
 
         % (2) Network gradient weight matrix
-        W_net = W_core;
+        % For symmetric A and full matrix sum (not upper triangle only),
+        % need contributions from both row and column
+        W_net = W_core + W_core';
 
         % (3) Network gradient (MINIMIZING - negate)
         grad_X_net = -W_net * Y_hat;
