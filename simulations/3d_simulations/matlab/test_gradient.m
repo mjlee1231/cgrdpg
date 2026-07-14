@@ -158,9 +158,8 @@ function [f, g] = surrogate_objective_gradient(x, A, B, Y_hat, Z_hat, n, d, tau)
         W_core(~is_off_diag) = 0;  % Exclude diagonal
 
         % (2) Network gradient weight matrix
-        % For symmetric A and full matrix sum (not upper triangle only),
-        % each edge is counted twice, so we need factor 1/2
-        W_net = 0.5 * (W_core + W_core');
+        % Since Y_hat is fixed in surrogate, only row contribution matters
+        W_net = W_core;
 
         % (3) Network gradient (MINIMIZING - negate)
         grad_X_net = -W_net * Y_hat;
