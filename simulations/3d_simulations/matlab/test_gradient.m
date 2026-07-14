@@ -38,10 +38,11 @@ eigvals = diag(D);
 eigvals_sorted = eigvals(idx);
 X_init = V(:, idx(1:d)) * diag(sqrt(abs(eigvals_sorted(1:d))));
 
-% Estimate signature from ASE eigenvalues
-S_estimated = diag(sign(eigvals_sorted(1:d)));
+% Use provided p to construct signature (not from eigenvalue signs)
+q = d - p;
+S_estimated = diag([ones(p, 1); -ones(q, 1)]);
 
-fprintf('Estimated signature: S = diag([');
+fprintf('Using signature: S = diag([');
 fprintf('%+d ', diag(S_estimated)');
 fprintf('])\n\n');
 

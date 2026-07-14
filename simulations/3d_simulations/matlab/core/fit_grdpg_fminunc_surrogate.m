@@ -47,11 +47,11 @@ n = size(A, 1);
 p_cov = size(B, 1);
 q = d - p;
 
-% Step 0: Initialize with ASE and estimate signature matrix
+% Step 0: Initialize with ASE and use provided signature
 fprintf('Initializing with ASE...\n');
-[X_current, S_estimated] = initialize_ase(A, d);
+[X_current, S_estimated] = initialize_ase(A, d, p);
 
-fprintf('  Estimated signature: S = diag([');
+fprintf('  Using signature: S = diag([');
 fprintf('%+d ', diag(S_estimated)');
 fprintf('])\n');
 
@@ -124,9 +124,11 @@ fprintf('  Final objective: %.6e\n', -fval);
 
 end
 
-function [X_init, S_estimated] = initialize_ase(A, d)
-    % Initialize with Adjacency Spectral Embedding and estimate signature
+function [X_init, S_estimated] = initialize_ase(A, d, p)
+    % Initialize with Adjacency Spectral Embedding using provided signature
+    % p = number of positive signature directions, q = d - p negatives
     n = size(A, 1);
+    q = d - p;
 
     % Augmented adjacency for better initialization
     A_aug = A;
@@ -143,8 +145,9 @@ function [X_init, S_estimated] = initialize_ase(A, d)
     eigvals = eigvals(idx);
     V = V(:, idx);
 
-    % Estimate signature from top d eigenvalues
-    S_estimated = diag(sign(eigvals(1:d)));
+    % Construct signature matrix from provided p (not from eigenvalue signs)
+    % S = diag([+1, ..., +1, -1, ..., -1]) with p positive and q negative
+    S_estimated = diag([ones(p, 1); -ones(q, 1)]);
 
     % Take top d eigenvectors (unsigned version: U |Lambda|^{1/2})
     X_init = V(:, 1:d) * diag(sqrt(abs(eigvals(1:d))));
