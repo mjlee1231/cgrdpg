@@ -83,7 +83,7 @@ S_mat = X_opt * Y_opt';
 is_off_diag = ~eye(n);
 
 [psi_val, Psi_val, ~] = psi_functions(S_mat, tau);
-net_obj = sum(A(is_off_diag) .* psi_val(is_off_diag) + Psi_val(is_off_diag));
+net_obj = sum((A(is_off_diag) - S_mat(is_off_diag)) .* psi_val(is_off_diag) + Psi_val(is_off_diag));
 
 B_pred = Z_opt * X_opt';
 cov_obj = -0.5 * sum((B(:) - B_pred(:)).^2);
