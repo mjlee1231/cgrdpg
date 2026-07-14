@@ -171,9 +171,8 @@ function [f, g, H] = surrogate_objective_gradient(x, A, B, Y_hat, Z_hat, n, d, t
     net_obj = sum(A(is_off_diag) .* psi_val(is_off_diag) + Psi_val(is_off_diag));
 
     % 5. Covariate component: -0.5 * ||B - Z_hat*X'||_F^2
-    % By Frobenius norm property: ||B - Z_hat*X'||_F^2 = ||B' - X*Z_hat'||_F^2
-    B_pred_T = X * Z_hat';
-    cov_obj = -0.5 * sum((B' - B_pred_T).^2, 'all');
+    B_pred = Z_hat * X';  % (p_cov x n)
+    cov_obj = -0.5 * sum((B - B_pred).^2, 'all');
 
     % 6. Total objective (fminunc minimization, so negate)
     f = -(net_obj + cov_obj);
@@ -184,15 +183,15 @@ function [f, g, H] = surrogate_objective_gradient(x, A, B, Y_hat, Z_hat, n, d, t
         W_core = (A - S_mat) .* dpsi_val;
         W_core(~is_off_diag) = 0;  % Exclude diagonal
 
-        % (2) Account for symmetric network structure
-        % Sum contributions from both row and column
-        W_net = W_core + W_core';
+        % (2) Network gradient weight matrix (no double counting)
+        W_net = W_core;
 
         % (3) Network gradient (MINIMIZING - negate)
         grad_X_net = -W_net * Y_hat;
 
         % (4) Covariate gradient (MINIMIZING - negate)
-        grad_X_cov = -(B' - B_pred_T) * Z_hat;
+        % B_pred already computed above for objective
+        grad_X_cov = -(B - B_pred)' * Z_hat;  % (n x p_cov) * (p_cov x d) -> (n x d)
 
         % (5) Total gradient
         grad_X = grad_X_net + grad_X_cov;
