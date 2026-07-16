@@ -18,20 +18,5 @@ mkdir -p results_matlab_2d_coverage
 # Load MATLAB module
 module load matlab/2025a
 
-# Run all 100 replications in a loop
-matlab -batch "
-fprintf('Running 2D Coverage: 100 Replications\n');
-fprintf('======================================\n\n');
-addpath('core');
-total_start = tic;
-for rep = 1:100
-    fprintf('\n--- Rep %d/100 ---\n', rep);
-    try
-        coverage_2d_single_rep(rep);
-    catch ME
-        fprintf('ERROR in rep %d: %s\n', rep, ME.message);
-    end
-end
-fprintf('\nTotal time: %.1f min\n', toc(total_start)/60);
-fprintf('Now run: matlab -batch \"aggregate_coverage_2d\"\n');
-"
+# Run all 100 replications
+matlab -batch "run_all_2d"
