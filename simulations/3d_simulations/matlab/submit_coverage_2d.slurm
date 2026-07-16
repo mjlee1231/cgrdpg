@@ -1,11 +1,17 @@
 #!/bin/bash
-#SBATCH --job-name=matlab_2d_cov
-#SBATCH --output=logs_matlab_2d/coverage_%a.out
-#SBATCH --error=errors_matlab_2d/coverage_%a.err
-#SBATCH --array=1-100
-#SBATCH --time=02:00:00
-#SBATCH --mem=8G
+#SBATCH --account=r00357
+#SBATCH --job-name=matlab_2d_cov_%a
+#SBATCH --partition=general
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
+#SBATCH --mem=8G
+#SBATCH --time=02:00:00
+#SBATCH --array=1-100
+#SBATCH --output=logs_matlab_2d/rep%03a_%j.out
+#SBATCH --error=errors_matlab_2d/rep%03a_%j.err
+#SBATCH --mail-type=END,FAIL
+#SBATCH --mail-user=mle6@iu.edu
 
 # Create output directories
 mkdir -p logs_matlab_2d
