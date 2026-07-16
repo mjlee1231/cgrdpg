@@ -80,14 +80,15 @@ options = optimoptions('fminunc', ...
     'SpecifyObjectiveGradient', true, ...
     'HessianFcn', 'objective');
 
-[X_opt, Z_opt, fval, exitflag, output] = ...
+[X_opt, Z_opt, fval, exitflag, output, S_estimated] = ...
     fit_grdpg_fminunc_surrogate(A, B, d, p, tau, options);
 
 cgrdpg_time = toc(t0);
 
 % Procrustes alignment
 [X_cgrdpg, ~] = procrustes_align(X_opt, X0);
-Y_cgrdpg = X_cgrdpg * S;
+% CRITICAL: Use estimated signature S_estimated (not true S) for PLUGIN method
+Y_cgrdpg = X_cgrdpg * S_estimated;
 % Z_cgrdpg = B * X_cgrdpg * inv(X_cgrdpg' * X_cgrdpg)
 Z_cgrdpg = (X_cgrdpg \ B')';
 

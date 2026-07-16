@@ -1,4 +1,4 @@
-function [X_opt, Z_opt, fval, exitflag, output] = fit_grdpg_fminunc_surrogate(A, B, d, p, tau, options)
+function [X_opt, Z_opt, fval, exitflag, output, S_estimated] = fit_grdpg_fminunc_surrogate(A, B, d, p, tau, options)
 % FIT_GRDPG_FMINUNC_SURROGATE Fit GRDPG with surrogate likelihood (matching R implementation)
 %
 % Implements surrogate/majorization algorithm with outer iterations:
@@ -26,6 +26,7 @@ function [X_opt, Z_opt, fval, exitflag, output] = fit_grdpg_fminunc_surrogate(A,
 %   fval - final objective value (surrogate negative log-likelihood)
 %   exitflag - optimization exit flag
 %   output - optimization output structure
+%   S_estimated - (d x d) estimated signature matrix
 
 if nargin < 5 || isempty(tau)
     tau = 0.001;

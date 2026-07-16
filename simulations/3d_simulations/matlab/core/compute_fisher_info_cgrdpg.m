@@ -29,9 +29,10 @@ s_i = X_mat(i, :) * Y_mat';  % (1 x n) vector
 w = dpsi(s_i(:), tau);  % (n x 1) vector
 w(i) = 0;  % Exclude self-loop
 
-% Network Fisher information: Y^T * diag(sqrt(w)) * Y
-% Note: Using sqrt(w) to match R implementation
-G_net = Y_mat' * (Y_mat .* sqrt(w));
+% Network Fisher information: Y^T * diag(w) * Y
+% R's crossprod(Y * sqrt(w)) = t(Y*sqrt(w)) %*% (Y*sqrt(w)) = Y^T diag(w) Y
+% In MATLAB: Y' * (Y .* w) is equivalent and simpler
+G_net = Y_mat' * (Y_mat .* w);
 
 % Covariate Fisher information: Z^T * Z
 G_cov = Z_mat' * Z_mat;
