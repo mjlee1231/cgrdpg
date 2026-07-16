@@ -19,7 +19,7 @@ mkdir -p errors_matlab_2d
 mkdir -p results_matlab_2d_coverage
 
 # Load MATLAB module
-module load matlab/R2024b
+module load matlab/2025a
 
 # Run single replication
 matlab -batch "coverage_2d_single_rep(${SLURM_ARRAY_TASK_ID})"
