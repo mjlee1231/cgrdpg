@@ -41,7 +41,7 @@ for i = 1:n
     G = X_signed(idx_j, :)' * (X_signed(idx_j, :) .* w_score);
 
     % Newton-Raphson update from unsigned ASE
-    X_new(i, :) = x_i_unsigned' + (G + 1e-9 * eye(d)) \ grad;
+    X_new(i, :) = (x_i_unsigned + (G + 1e-9 * eye(d)) \ grad)';
 end
 
 end
