@@ -65,9 +65,17 @@ fprintf('  Vertex coverage range:         [%.2f%%, %.2f%%]\n', ...
 fprintf('  Std across vertices:           %.2f%%\n\n', 100 * std(vertexwise_coverage_plugin, 'omitnan'));
 
 fprintf('Optimization:\n');
-fprintf('  Mean SSE:        %.4f\n', mean(all_sse, 'omitnan'));
 fprintf('  Convergence:     %.1f%%\n', 100 * mean(all_converged, 'omitnan'));
-fprintf('  Mean time:       %.1f sec\n', mean(all_times, 'omitnan'));
+fprintf('  Mean time:       %.1f sec\n\n', mean(all_times, 'omitnan'));
+
+fprintf('SSE Distribution:\n');
+fprintf('  Mean:            %.4f\n', mean(all_sse, 'omitnan'));
+fprintf('  Std:             %.4f\n', std(all_sse, 'omitnan'));
+fprintf('  Min:             %.4f\n', min(all_sse));
+fprintf('  25th percentile: %.4f\n', quantile(all_sse, 0.25));
+fprintf('  Median:          %.4f\n', median(all_sse, 'omitnan'));
+fprintf('  75th percentile: %.4f\n', quantile(all_sse, 0.75));
+fprintf('  Max:             %.4f\n', max(all_sse));
 
 %% Save aggregated results
 save(fullfile(results_dir, 'aggregated_vertexwise_results.mat'), ...
