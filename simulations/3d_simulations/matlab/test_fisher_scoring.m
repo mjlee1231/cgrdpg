@@ -48,7 +48,7 @@ fprintf('Fitting with Fisher scoring...\n');
 fprintf('----------------------------------------\n');
 t_start = tic;
 [X_opt, Z_opt, fval, exitflag, output, S_est] = ...
-    fit_grdpg_fisher(A, B, d, p, tau, maxit, tol);
+    fit_grdpg_fisher_fast(A, B, d, p, tau, maxit, tol);
 fit_time = toc(t_start);
 fprintf('----------------------------------------\n');
 

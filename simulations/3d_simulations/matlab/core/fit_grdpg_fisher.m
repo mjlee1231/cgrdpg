@@ -170,8 +170,7 @@ function f = surrogate_objective(A, X, Z, B, S, tau)
     A_vec = A(mask);
 
     % Compute psi and Psi
-    psi_vals = psi(XY_vec, tau);
-    Psi_vals = Psi(XY_vec, tau);
+    [psi_vals, Psi_vals, ~, ~] = psi_functions(XY_vec, tau);
 
     net_part = sum((A_vec - XY_vec) .* psi_vals + Psi_vals);
 

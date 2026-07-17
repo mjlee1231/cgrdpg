@@ -80,9 +80,9 @@ fprintf('ASE: time=%.1fs, S_est=diag([%+d,%+d,%+d])\n', ...
 fprintf('Fitting cgrdpg...\n');
 t0 = tic;
 
-% Use Fisher scoring to match R implementation exactly
+% Use fast Fisher scoring (fixed step size, no expensive line search)
 [X_opt, Z_opt, fval, exitflag, output, ~] = ...
-    fit_grdpg_fisher(A, B, d, p, tau, maxit, tol);
+    fit_grdpg_fisher_fast(A, B, d, p, tau, maxit, tol);
 
 cgrdpg_time = toc(t0);
 
