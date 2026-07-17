@@ -110,4 +110,4 @@ else
 end
 
 fprintf('\nTarget (R rep 1): SSE = 8.23\n');
-fprintf('Note: Even R\'s Fisher scoring produces SSE 8-20, so anything under 30 is reasonable.\n');
+fprintf('Note: Even R''s Fisher scoring produces SSE 8-20, so anything under 30 is reasonable.\n');
