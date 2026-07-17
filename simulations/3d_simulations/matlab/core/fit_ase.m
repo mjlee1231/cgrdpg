@@ -40,7 +40,9 @@ X_ase_unsigned = V_d * diag(sqrt(abs(lambda_d)));
 % Signed ASE: U |Λ|^{1/2} sign(Λ)
 X_ase_signed = V_d * diag(sqrt(abs(lambda_d)) .* sign(lambda_d));
 
-% Signature matrix from actual eigenvalue signs
-S_estimated = diag(sign(lambda_d));
+% Signature matrix: R's ase_grdpg constructs it as diag(c(rep(1, p), rep(-1, q)))
+% NOT from actual eigenvalue signs! It's ordered: all +1's first, then all -1's
+% This matches: sign_diag <- diag(c(rep(1, p), rep(-1, q)))
+S_estimated = diag([ones(p, 1); -ones(q, 1)]);
 
 end
