@@ -58,7 +58,7 @@ fprintf('])\n');
 
 % Outer loop parameters
 max_outer_iter = 30;
-tol_outer = 0.01;  % Convergence tolerance on max row change
+tol_outer = 0.005;  % Convergence tolerance on max row change (match R default)
 
 % Outer loop: Surrogate optimization
 fprintf('\nStarting surrogate optimization with outer iterations...\n');
