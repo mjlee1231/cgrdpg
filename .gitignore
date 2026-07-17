@@ -1,1 +1,23 @@
 .Rapp.history
+# R results and data
+  *.rds
+  *.Rdata
+  *_results/
+  **/results*/
+
+  # Compiled files
+  *.o
+  *.so
+  *.tar.gz
+
+  # OS files
+  .DS_Store
+  .Rhistory
+
+  # Plots
+  *.pdf
+  *.png
+  Rplots.pdf
+
+  # Logs
+  *.log
