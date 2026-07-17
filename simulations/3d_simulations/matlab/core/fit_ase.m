@@ -34,15 +34,16 @@ V = V(:, idx);
 V_d = V(:, 1:d);
 lambda_d = eigvals(1:d);
 
+% Signature matrix: R's ase_grdpg constructs it as diag(c(rep(1, p), rep(-1, q)))
+% This is ORDERED: all +1's first, then all -1's (not actual eigenvalue signs!)
+S_estimated = diag([ones(p, 1); -ones(q, 1)]);
+
 % Unsigned ASE: U |Λ|^{1/2}
 X_ase_unsigned = V_d * diag(sqrt(abs(lambda_d)));
 
-% Signed ASE: U |Λ|^{1/2} sign(Λ)
-X_ase_signed = V_d * diag(sqrt(abs(lambda_d)) .* sign(lambda_d));
-
-% Signature matrix: R's ase_grdpg constructs it as diag(c(rep(1, p), rep(-1, q)))
-% NOT from actual eigenvalue signs! It's ordered: all +1's first, then all -1's
-% This matches: sign_diag <- diag(c(rep(1, p), rep(-1, q)))
-S_estimated = diag([ones(p, 1); -ones(q, 1)]);
+% Signed ASE: X_signed = X * S_estimated (matches R exactly!)
+% CRITICAL: NOT using actual eigenvalue signs, but the ordered signature matrix
+% R verification: all.equal(fit$X_signed, fit$X %*% fit$sign_diag) == TRUE
+X_ase_signed = X_ase_unsigned * S_estimated;
 
 end
