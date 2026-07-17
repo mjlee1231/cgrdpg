@@ -43,12 +43,23 @@ A(1:n+1:end) = 0;
 
 B = Z0 * X0' + randn(p_cov, n);
 
-% Fit with Fisher scoring
-fprintf('Fitting with Fisher scoring...\n');
+% Fit with fminunc (Fisher scoring was numerically unstable)
+fprintf('Fitting with fminunc surrogate...\n');
 fprintf('----------------------------------------\n');
 t_start = tic;
+
+options = optimoptions('fminunc', ...
+    'Algorithm', 'trust-region', ...
+    'Display', 'off', ...
+    'MaxIterations', 100, ...
+    'OptimalityTolerance', 1e-6, ...
+    'StepTolerance', 1e-10, ...
+    'SpecifyObjectiveGradient', true, ...
+    'HessianFcn', 'objective');
+
 [X_opt, Z_opt, fval, exitflag, output, S_est] = ...
-    fit_grdpg_fisher_fast(A, B, d, p, tau, maxit, tol);
+    fit_grdpg_fminunc_surrogate(A, B, d, p, tau, options);
+
 fit_time = toc(t_start);
 fprintf('----------------------------------------\n');
 

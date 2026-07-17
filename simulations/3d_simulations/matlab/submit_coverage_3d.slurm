@@ -6,7 +6,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=16G
-#SBATCH --time=01:00:00
+#SBATCH --time=02:00:00
 #SBATCH --array=1-100
 #SBATCH --output=logs_matlab_3d/rep%03a_%j.out
 #SBATCH --error=logs_matlab_3d/rep%03a_%j.err
