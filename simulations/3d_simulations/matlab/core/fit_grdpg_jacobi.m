@@ -51,9 +51,10 @@ fprintf('])\n\n');
 history = struct();
 history.max_row_change = [];
 history.objective = [];
+history.step_size = [];
 
-fprintf('%-5s | %-15s | %-15s\n', 'Iter', 'Objective', 'Max Row Change');
-fprintf('%s\n', repmat('-', 1, 50));
+fprintf('%-5s | %-15s | %-15s | %-10s\n', 'Iter', 'Objective', 'Max Row Change', 'Step Size');
+fprintf('%s\n', repmat('-', 1, 65));
 
 exitflag = 0;
 converged = false;
@@ -64,8 +65,18 @@ for iter = 1:maxit
     Y_current = X_current * S_estimated;
     Z_current = (X_current \ B')';
 
+    % Adaptive step size: start conservative, then reduce further
+    % This prevents numerical explosion when edge probs are near 0 or 1
+    if iter <= 5
+        step_size = 0.5;  % Initial phase: moderate step
+    elseif iter <= 15
+        step_size = 0.3;  % Middle phase: smaller step
+    else
+        step_size = 0.1;  % Final phase: very small step for refinement
+    end
+
     % Vectorized update: compute Newton direction for ALL vertices
-    X_new = jacobi_sweep_vectorized(A, X_current, Y_current, Z_current, B, S_estimated, tau);
+    X_new = jacobi_sweep_vectorized(A, X_current, Y_current, Z_current, B, S_estimated, tau, step_size);
 
     % Refit Z
     Z_new = (X_new \ B')';
@@ -78,8 +89,9 @@ for iter = 1:maxit
     row_changes = sqrt(sum((X_new - X_current).^2, 2));
     max_row_change = max(row_changes);
     history.max_row_change(iter) = max_row_change;
+    history.step_size(iter) = step_size;
 
-    fprintf('%5d | %+15.6e | %15.6e\n', iter, fval, max_row_change);
+    fprintf('%5d | %+15.6e | %15.6e | %10.3f\n', iter, fval, max_row_change, step_size);
 
     % Check convergence
     if max_row_change < tol
@@ -130,10 +142,13 @@ function [X_init, S_estimated] = initialize_ase(A_aug, d, p)
     X_init = V(:, 1:d) * diag(sqrt(abs(eigvals(1:d))));
 end
 
-function X_new = jacobi_sweep_vectorized(A, X, Y, Z, B, S, tau)
+function X_new = jacobi_sweep_vectorized(A, X, Y, Z, B, S, tau, step_size)
 % Vectorized Jacobi sweep: compute updates for ALL vertices simultaneously
 % Based on current state (X, Y, Z), compute Newton directions for all vertices
 % Then apply all updates at once (Jacobi-style, not Gauss-Seidel)
+%
+% Inputs:
+%   step_size - damping factor for Newton step (0 < step_size <= 1)
 
 n = size(X, 1);
 d = size(X, 2);
@@ -193,8 +208,8 @@ for i = 1:n
         end
     end
 
-    % Jacobi update: use step size (can be tuned)
-    step_size = 1.0;  % Full Newton step
+    % Jacobi update with adaptive damping
+    % step_size is passed from outer loop and decreases over iterations
     X_new(i, :) = (x_i + step_size * p)';
 end
 
