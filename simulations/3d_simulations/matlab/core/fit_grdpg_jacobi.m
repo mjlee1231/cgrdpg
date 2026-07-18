@@ -65,14 +65,15 @@ for iter = 1:maxit
     Y_current = X_current * S_estimated;
     Z_current = (X_current \ B')';
 
-    % Adaptive step size: start conservative, then reduce further
-    % This prevents numerical explosion when edge probs are near 0 or 1
+    % Adaptive step size: very conservative to handle extreme edge probs
+    % When edge probs are near 1 (like 0.9971), Fisher info explodes
+    % Use very small steps to prevent numerical catastrophe
     if iter <= 5
-        step_size = 0.5;  % Initial phase: moderate step
+        step_size = 0.01;  % Initial phase: very small step
     elseif iter <= 15
-        step_size = 0.3;  % Middle phase: smaller step
+        step_size = 0.005;  % Middle phase: even smaller
     else
-        step_size = 0.1;  % Final phase: very small step for refinement
+        step_size = 0.001;  % Final phase: tiny refinement steps
     end
 
     % Vectorized update: compute Newton direction for ALL vertices
