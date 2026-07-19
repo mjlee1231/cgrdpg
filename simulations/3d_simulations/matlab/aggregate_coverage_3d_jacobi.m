@@ -72,15 +72,44 @@ overall_coverage_ose_plugin = mean(vertexwise_coverage_ose_plugin, 'omitnan');
 
 %% Summary
 fprintf('========================================\n');
-fprintf('Coverage Summary (JACOBI METHOD)\n');
+fprintf('Vertex-wise Coverage Summary (JACOBI METHOD)\n');
 fprintf('========================================\n\n');
 
-fprintf('cgrdpg-TRUE:      %.2f%%\n', 100 * overall_coverage_cgrdpg_true);
-fprintf('cgrdpg-PLUGIN:    %.2f%%\n', 100 * overall_coverage_cgrdpg_plugin);
-fprintf('ASE-TRUE:         %.2f%%\n', 100 * overall_coverage_ase_true);
-fprintf('ASE-PLUGIN:       %.2f%%\n', 100 * overall_coverage_ase_plugin);
-fprintf('OSE-TRUE:         %.2f%%\n', 100 * overall_coverage_ose_true);
-fprintf('OSE-PLUGIN:       %.2f%%\n\n', 100 * overall_coverage_ose_plugin);
+fprintf('cgrdpg-TRUE:\n');
+fprintf('  Overall (avg across vertices): %.2f%%\n', 100 * overall_coverage_cgrdpg_true);
+fprintf('  Vertex coverage range:         [%.2f%%, %.2f%%]\n', ...
+    100 * min(vertexwise_coverage_cgrdpg_true), 100 * max(vertexwise_coverage_cgrdpg_true));
+fprintf('  Std across vertices:           %.2f%%\n\n', 100 * std(vertexwise_coverage_cgrdpg_true, 'omitnan'));
+
+fprintf('cgrdpg-PLUGIN:\n');
+fprintf('  Overall (avg across vertices): %.2f%%\n', 100 * overall_coverage_cgrdpg_plugin);
+fprintf('  Vertex coverage range:         [%.2f%%, %.2f%%]\n', ...
+    100 * min(vertexwise_coverage_cgrdpg_plugin), 100 * max(vertexwise_coverage_cgrdpg_plugin));
+fprintf('  Std across vertices:           %.2f%%\n\n', 100 * std(vertexwise_coverage_cgrdpg_plugin, 'omitnan'));
+
+fprintf('ASE-TRUE:\n');
+fprintf('  Overall (avg across vertices): %.2f%%\n', 100 * overall_coverage_ase_true);
+fprintf('  Vertex coverage range:         [%.2f%%, %.2f%%]\n', ...
+    100 * min(vertexwise_coverage_ase_true), 100 * max(vertexwise_coverage_ase_true));
+fprintf('  Std across vertices:           %.2f%%\n\n', 100 * std(vertexwise_coverage_ase_true, 'omitnan'));
+
+fprintf('ASE-PLUGIN:\n');
+fprintf('  Overall (avg across vertices): %.2f%%\n', 100 * overall_coverage_ase_plugin);
+fprintf('  Vertex coverage range:         [%.2f%%, %.2f%%]\n', ...
+    100 * min(vertexwise_coverage_ase_plugin), 100 * max(vertexwise_coverage_ase_plugin));
+fprintf('  Std across vertices:           %.2f%%\n\n', 100 * std(vertexwise_coverage_ase_plugin, 'omitnan'));
+
+fprintf('OSE-TRUE:\n');
+fprintf('  Overall (avg across vertices): %.2f%%\n', 100 * overall_coverage_ose_true);
+fprintf('  Vertex coverage range:         [%.2f%%, %.2f%%]\n', ...
+    100 * min(vertexwise_coverage_ose_true), 100 * max(vertexwise_coverage_ose_true));
+fprintf('  Std across vertices:           %.2f%%\n\n', 100 * std(vertexwise_coverage_ose_true, 'omitnan'));
+
+fprintf('OSE-PLUGIN:\n');
+fprintf('  Overall (avg across vertices): %.2f%%\n', 100 * overall_coverage_ose_plugin);
+fprintf('  Vertex coverage range:         [%.2f%%, %.2f%%]\n', ...
+    100 * min(vertexwise_coverage_ose_plugin), 100 * max(vertexwise_coverage_ose_plugin));
+fprintf('  Std across vertices:           %.2f%%\n\n', 100 * std(vertexwise_coverage_ose_plugin, 'omitnan'));
 
 fprintf('Optimization:\n');
 fprintf('  cgrdpg Convergence: %.1f%%\n', 100 * mean(all_converged, 'omitnan'));
