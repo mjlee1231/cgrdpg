@@ -10,7 +10,7 @@ function coverage_3d_single_rep(rep_id)
 % Parameters:
 %   n = 1000, p_cov = 500, d = 3
 %   S = diag([1, 1, -1]) (indefinite signature)
-%   Latent curve: 3D helix
+%   Latent positions: linear + periodic (well-separated eigenvalues)
 
 % Add core folder to path
 addpath('core');
@@ -45,11 +45,11 @@ rep_start = tic;
 % Set seed for reproducibility
 rng(598 + rep_id);
 
-%% 1. Generate true latent positions (3D helix)
+%% 1. Generate true latent positions (linear + periodic, well-separated eigenvalues)
 t = (1:n)' / n;
-X0 = [0.15 * sin(2*pi*t) + 0.6, ...
-      0.15 * cos(2*pi*t) + 0.6, ...
-      0.15 * cos(4*pi*t)];
+X0 = [0.3*t + 0.5, ...
+      0.15 * sin(2*pi*t) + 0.6, ...
+      0.1 * cos(4*pi*t)];
 
 S = diag([1, 1, -1]);  % Indefinite signature
 Y0 = X0 * S;
