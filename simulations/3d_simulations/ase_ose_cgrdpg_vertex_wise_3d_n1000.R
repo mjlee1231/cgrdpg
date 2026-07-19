@@ -107,17 +107,17 @@ check_coverage <- function(err, Prec, scale = 1.0) {
 #  SINGLE REPLICATION
 # ============================================================================
 rep_start <- Sys.time()
-set.seed(seed = 20250401)
-#set.seed(598 + rep_id)
+#set.seed(seed = 20250401)
+set.seed(598 + rep_id)
 ncores <- as.integer(Sys.getenv("SLURM_CPUS_PER_TASK", "1"))
 if (ncores <= 1) ncores <- max(1, parallel::detectCores() - 1)
 cat(sprintf("Using %d cores for cgrdpg parallel fitting\n\n", ncores))
 
-  # 1. Latent positions
+  # 1. Latent positions (linear + periodic, well-separated eigenvalues)
   t <- (1:n) / n
-  X0 <- cbind(0.15 * sin(2*pi*t) + 0.6,
-              0.15 * cos(2*pi*t) + 0.6,
-              0.15 * cos(4*pi*t))
+  X0 <- cbind(0.3*t + 0.5,
+              0.15 * sin(2*pi*t) + 0.6,
+              0.1 * cos(4*pi*t))
   Y0 <- X0 %*% S
   Z0 <- matrix(rnorm(p_cov * d), p_cov, d)
   P  <- X0 %*% t(Y0)
