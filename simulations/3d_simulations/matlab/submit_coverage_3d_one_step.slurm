@@ -6,15 +6,16 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=16G
-#SBATCH --time=00:30:00
+#SBATCH --time=01:00:00
 #SBATCH --array=1-100
 #SBATCH --output=logs_matlab_one_step/rep%03a_%j.out
 #SBATCH --error=logs_matlab_one_step/rep%03a_%j.err
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=mle6@iu.edu
 
-# One-step cgrdpg estimators (Batch vs Jacobi)
-# Should be MUCH faster than full optimization (~30 sec vs 2 min)
+# One-step cgrdpg estimators: Batch (fminunc) + Jacobi
+# Batch: ~16% improvement (slower, ~2-5 min)
+# Jacobi: ~9% improvement (faster, ~30 sec)
 
 # Create output directories
 mkdir -p logs_matlab_one_step
