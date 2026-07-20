@@ -47,11 +47,10 @@ Z_init = B * (X_ase_unsigned / XtX);
 
 % Compute gradient and Fisher info
 idx_j = setdiff(1:n, i);
-Y_i = S_estimated * x_i;  % FIXED: Y_i = S * x_i
-s_i = X_ase_unsigned(idx_j, :) * Y_i;  % FIXED: s_ij = x_j^T * S * x_i
-p_i = max(min(1 ./ (1 + exp(-s_i / tau)), 1 - eps_clip), eps_clip);
-resid = A(i, idx_j)' - p_i;
-dpsi_val = 1 ./ (tau * p_i .* (1 - p_i));
+Y_i = S_estimated * x_i;  % Y_i = S * x_i
+s_i = X_ase_unsigned(idx_j, :) * Y_i;  % s_ij = x_j^T * S * x_i (linear predictor)
+resid = A(i, idx_j)' - s_i;  % Residual (psi link treats s as pseudo-probability)
+dpsi_val = dpsi(s_i, tau);  % Fisher weights using psi link
 
 Y_j = X_ase_unsigned(idx_j, :) * S_estimated;  % FIXED: Y_j = X_j * S
 grad_net = Y_j' * (resid .* dpsi_val);
@@ -68,7 +67,7 @@ G = (G_net + G_cov) / (n + p_cov);
 update_direction = (G + 1e-9 * eye(d)) \ grad;
 
 fprintf('\nVertex %d analysis:\n', i);
-fprintf('  Edge prob range:       [%.6f, %.6f]\n', min(p_i), max(p_i));
+fprintf('  Linear predictor s_ij: [%.6f, %.6f]\n', min(s_i), max(s_i));
 fprintf('  dpsi weights range:    [%.2e, %.2e]\n', min(dpsi_val), max(dpsi_val));
 fprintf('  Gradient_net (unscaled): %.6e\n', norm(grad_net_unscaled));
 fprintf('  Gradient_cov (unscaled): %.6e\n', norm(grad_cov_unscaled));
@@ -137,9 +136,8 @@ for i = 1:n
     idx_j = setdiff(1:n, i);
     Y_i = S_estimated * x_i;
     s_i = X_ase_unsigned(idx_j, :) * Y_i;
-    p_i = max(min(1 ./ (1 + exp(-s_i / tau)), 1 - eps_clip), eps_clip);
-    resid = A(i, idx_j)' - p_i;
-    dpsi_val = 1 ./ (tau * p_i .* (1 - p_i));
+    resid = A(i, idx_j)' - s_i;
+    dpsi_val = dpsi(s_i, tau);
 
     Y_j = X_ase_unsigned(idx_j, :) * S_estimated;
     grad_net = Y_j' * (resid .* dpsi_val);

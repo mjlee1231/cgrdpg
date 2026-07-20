@@ -44,15 +44,14 @@ for i = 1:n
     % Indices excluding vertex i
     idx_j = setdiff(1:n, i);
 
-    % Edge probabilities: s_ij = x_j^T * S * x_i
+    % Linear predictor: s_ij = x_j^T * S * x_i
     s_i = X_init(idx_j, :) * Y_i;
-    p_i = max(min(1 ./ (1 + exp(-s_i / tau)), 1 - 1e-10), 1e-10);
 
-    % Residuals
-    resid = A(i, idx_j)' - p_i;
+    % Residuals (using psi link, s_i is treated as pseudo-probability)
+    resid = A(i, idx_j)' - s_i;
 
-    % Fisher weights
-    dpsi_val = 1 ./ (tau * p_i .* (1 - p_i));
+    % Fisher weights: dpsi(s, tau) using psi link
+    dpsi_val = dpsi(s_i, tau);
 
     % For gradient and Fisher info, we need Y_j = X_j * S
     Y_j = X_init(idx_j, :) * S_estimated;
