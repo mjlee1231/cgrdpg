@@ -7,9 +7,9 @@ addpath('core');
 fprintf('Debugging One-Step cgrdpg Estimator\n');
 fprintf('====================================\n\n');
 
-% Small test case
-n = 100;
-p_cov = 50;
+% Full size test case (matching actual simulation)
+n = 1000;
+p_cov = 500;
 d = 3;
 p = 2;
 tau = 0.001;
@@ -55,6 +55,8 @@ dpsi_val = 1 ./ (tau * p_i .* (1 - p_i));
 
 grad_net = Y_init(idx_j, :)' * (resid .* dpsi_val);
 grad_cov = Z_init' * (B(:, i) - Z_init * x_i);
+grad_net_unscaled = grad_net;
+grad_cov_unscaled = grad_cov;
 grad = (grad_net + grad_cov) / (n + p_cov);
 
 G_net = Y_init(idx_j, :)' * (Y_init(idx_j, :) .* dpsi_val);
@@ -65,9 +67,14 @@ G = (G_net + G_cov) / (n + p_cov);
 update_direction = (G + 1e-9 * eye(d)) \ grad;
 
 fprintf('\nVertex %d analysis:\n', i);
-fprintf('  Gradient norm:        %.6f\n', norm(grad));
-fprintf('  Update direction norm: %.6f\n', norm(update_direction));
-fprintf('  G condition number:    %.2e\n', cond(G));
+fprintf('  Edge prob range:       [%.6f, %.6f]\n', min(p_i), max(p_i));
+fprintf('  dpsi weights range:    [%.2e, %.2e]\n', min(dpsi_val), max(dpsi_val));
+fprintf('  Gradient_net (unscaled): %.6e\n', norm(grad_net_unscaled));
+fprintf('  Gradient_cov (unscaled): %.6e\n', norm(grad_cov_unscaled));
+fprintf('  Gradient (SCALED):       %.6e\n', norm(grad));
+fprintf('  Update direction norm:   %.6f\n', norm(update_direction));
+fprintf('  G condition number:      %.2e\n', cond(G));
+fprintf('  Scaling factor (n+p):    %d\n', n + p_cov);
 
 % Test both directions
 x_plus = x_i + update_direction;
