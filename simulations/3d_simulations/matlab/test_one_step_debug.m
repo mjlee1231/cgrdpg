@@ -42,24 +42,25 @@ fprintf('ASE SSE: %.4f\n', sse_ase);
 % Test SINGLE vertex update
 i = 1;
 x_i = X_ase_unsigned(i, :)';
-Y_init = X_ase_unsigned * S_estimated;
 XtX = X_ase_unsigned' * X_ase_unsigned;
 Z_init = B * (X_ase_unsigned / XtX);
 
 % Compute gradient and Fisher info
 idx_j = setdiff(1:n, i);
-s_i = Y_init(idx_j, :) * x_i;
+Y_i = S_estimated * x_i;  % FIXED: Y_i = S * x_i
+s_i = X_ase_unsigned(idx_j, :) * Y_i;  % FIXED: s_ij = x_j^T * S * x_i
 p_i = max(min(1 ./ (1 + exp(-s_i / tau)), 1 - eps_clip), eps_clip);
 resid = A(i, idx_j)' - p_i;
 dpsi_val = 1 ./ (tau * p_i .* (1 - p_i));
 
-grad_net = Y_init(idx_j, :)' * (resid .* dpsi_val);
+Y_j = X_ase_unsigned(idx_j, :) * S_estimated;  % FIXED: Y_j = X_j * S
+grad_net = Y_j' * (resid .* dpsi_val);
 grad_cov = Z_init' * (B(:, i) - Z_init * x_i);
 grad_net_unscaled = grad_net;
 grad_cov_unscaled = grad_cov;
 grad = (grad_net + grad_cov) / (n + p_cov);
 
-G_net = Y_init(idx_j, :)' * (Y_init(idx_j, :) .* dpsi_val);
+G_net = Y_j' * (Y_j .* dpsi_val);
 G_cov = Z_init' * Z_init;
 G = (G_net + G_cov) / (n + p_cov);
 
@@ -134,16 +135,18 @@ X_minus = zeros(n, d);
 for i = 1:n
     x_i = X_ase_unsigned(i, :)';
     idx_j = setdiff(1:n, i);
-    s_i = Y_init(idx_j, :) * x_i;
+    Y_i = S_estimated * x_i;
+    s_i = X_ase_unsigned(idx_j, :) * Y_i;
     p_i = max(min(1 ./ (1 + exp(-s_i / tau)), 1 - eps_clip), eps_clip);
     resid = A(i, idx_j)' - p_i;
     dpsi_val = 1 ./ (tau * p_i .* (1 - p_i));
 
-    grad_net = Y_init(idx_j, :)' * (resid .* dpsi_val);
+    Y_j = X_ase_unsigned(idx_j, :) * S_estimated;
+    grad_net = Y_j' * (resid .* dpsi_val);
     grad_cov = Z_init' * (B(:, i) - Z_init * x_i);
     grad = (grad_net + grad_cov) / (n + p_cov);
 
-    G_net = Y_init(idx_j, :)' * (Y_init(idx_j, :) .* dpsi_val);
+    G_net = Y_j' * (Y_j .* dpsi_val);
     G_cov = Z_init' * Z_init;
     G = (G_net + G_cov) / (n + p_cov);
 

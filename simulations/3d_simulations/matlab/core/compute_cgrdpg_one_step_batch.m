@@ -19,9 +19,6 @@ n = size(A, 1);
 p_cov = size(B, 1);
 d = size(X_init, 2);
 
-% Use estimated signature
-Y_init = X_init * S_estimated;
-
 % Initial Z estimate: Z = B * X * (X'X)^{-1}
 XtX = X_init' * X_init;
 Z_init = B * (X_init / XtX);
@@ -33,11 +30,14 @@ for i = 1:n
     % Current position
     x_i = X_init(i, :)';
 
+    % Y_i = S * x_i (for computing s_ij = x_j^T * S * x_i)
+    Y_i = S_estimated * x_i;
+
     % Indices excluding vertex i
     idx_j = setdiff(1:n, i);
 
-    % Edge probabilities: s_ij = x_i' * S * x_j
-    s_i = Y_init(idx_j, :) * x_i;
+    % Edge probabilities: s_ij = x_j^T * S * x_i
+    s_i = X_init(idx_j, :) * Y_i;
 
     % Clipped probabilities using psi function
     p_i = max(min(1 ./ (1 + exp(-s_i / tau)), 1 - 1e-10), 1e-10);
@@ -48,8 +48,11 @@ for i = 1:n
     % Fisher information weights: dpsi(s, tau)
     dpsi_val = 1 ./ (tau * p_i .* (1 - p_i));
 
+    % For gradient and Fisher info, we need Y_j = X_j * S
+    Y_j = X_init(idx_j, :) * S_estimated;
+
     % Gradient (network part)
-    grad_net = Y_init(idx_j, :)' * (resid .* dpsi_val);
+    grad_net = Y_j' * (resid .* dpsi_val);
 
     % Gradient (covariate part)
     grad_cov = Z_init' * (B(:, i) - Z_init * x_i);
@@ -58,7 +61,7 @@ for i = 1:n
     grad = (grad_net + grad_cov) / (n + p_cov);
 
     % Fisher information matrix (network part)
-    G_net = Y_init(idx_j, :)' * (Y_init(idx_j, :) .* dpsi_val);
+    G_net = Y_j' * (Y_j .* dpsi_val);
 
     % Fisher information matrix (covariate part)
     G_cov = Z_init' * Z_init;
