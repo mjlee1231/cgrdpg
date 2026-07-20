@@ -3,8 +3,12 @@ function coverage_3d_single_rep_one_step(rep_id)
 %
 % Compares:
 %   - ASE (baseline)
-%   - cgrdpg-ONE-STEP-BATCH (batch Newton-Raphson, 1 iteration)
-%   - cgrdpg-ONE-STEP-JACOBI (Jacobi Newton-Raphson, 1 iteration)
+%   - cgrdpg-ONE-STEP-BATCH: Fix Y_hat, Z_hat, optimize ALL X using fminunc (true batch)
+%   - cgrdpg-ONE-STEP-JACOBI: Compute all Newton updates using X_init, apply simultaneously
+%
+% Key difference:
+%   - BATCH (fminunc): Multiple inner iterations, all X updated simultaneously
+%   - JACOBI: Single Newton step, updates computed in parallel and applied at once
 %
 % Inputs:
 %   rep_id - replication number (1-100)
@@ -72,15 +76,15 @@ ase_time = toc(t0);
 fprintf('ASE: time=%.1fs, S_est=diag([%+d,%+d,%+d])\n', ...
     ase_time, diag(S_estimated));
 
-%% 4. cgrdpg-ONE-STEP-BATCH
-fprintf('Computing cgrdpg-ONE-STEP-BATCH...\n');
+%% 4. cgrdpg-ONE-STEP-BATCH (using fminunc - true batch update)
+fprintf('Computing cgrdpg-ONE-STEP-BATCH (fminunc)...\n');
 t0 = tic;
 [X_one_step_batch, Z_one_step_batch] = ...
-    compute_cgrdpg_one_step_batch(A, B, X_ase_unsigned, S_estimated, tau);
+    compute_cgrdpg_one_step_batch_fminunc(A, B, X_ase_unsigned, S_estimated, tau);
 one_step_batch_time = toc(t0);
 [X_one_step_batch_aligned, ~] = procrustes_align(X_one_step_batch, X0);
 Y_one_step_batch = X_one_step_batch_aligned * S_estimated;
-fprintf('cgrdpg-ONE-STEP-BATCH: time=%.1fs\n', one_step_batch_time);
+fprintf('cgrdpg-ONE-STEP-BATCH (fminunc): time=%.1fs\n', one_step_batch_time);
 
 %% 5. cgrdpg-ONE-STEP-JACOBI
 fprintf('Computing cgrdpg-ONE-STEP-JACOBI...\n');

@@ -111,68 +111,56 @@ else
     fprintf('  Should use: x_new = x - G^{-1} * grad (OPPOSITE SIGN!)\n');
 end
 
-% Full one-step with BOTH signs
+% Full one-step tests
 fprintf('\n====================================\n');
 fprintf('Full One-Step Test\n');
 fprintf('====================================\n\n');
 
-% Current implementation (+)
-[X_plus, ~] = compute_cgrdpg_one_step_batch(A, B, X_ase_unsigned, S_estimated, tau);
-[X_plus_aligned, ~] = procrustes_align(X_plus, X0);
-sse_plus = sum((X_plus_aligned - X0).^2, 'all');
+% Batch (fminunc) - true batch update
+fprintf('Testing BATCH (fminunc)...\n');
+[X_batch, ~] = compute_cgrdpg_one_step_batch_fminunc(A, B, X_ase_unsigned, S_estimated, tau);
+[X_batch_aligned, ~] = procrustes_align(X_batch, X0);
+sse_batch = sum((X_batch_aligned - X0).^2, 'all');
 
-fprintf('Current (x + update):\n');
-fprintf('  SSE: %.4f', sse_plus);
-if sse_plus < sse_ase
-    fprintf(' ✓ (%.1f%% improvement)\n', 100*(sse_ase-sse_plus)/sse_ase);
+fprintf('BATCH (fminunc):\n');
+fprintf('  SSE: %.4f', sse_batch);
+if sse_batch < sse_ase
+    fprintf(' ✓ (%.1f%% improvement)\n', 100*(sse_ase-sse_batch)/sse_ase);
 else
-    fprintf(' ✗ (%.1f%% worse)\n\n', 100*(sse_plus-sse_ase)/sse_ase);
+    fprintf(' ✗ (%.1f%% worse)\n', 100*(sse_batch-sse_ase)/sse_ase);
 end
 
-% Try opposite sign (-)
-X_minus = zeros(n, d);
-for i = 1:n
-    x_i = X_ase_unsigned(i, :)';
-    idx_j = setdiff(1:n, i);
-    Y_i = S_estimated * x_i;
-    s_i = X_ase_unsigned(idx_j, :) * Y_i;
-    resid = A(i, idx_j)' - s_i;
-    dpsi_val = dpsi(s_i, tau);
+% Jacobi - single Newton step
+fprintf('\nTesting JACOBI (single Newton step)...\n');
+[X_jacobi, ~] = compute_cgrdpg_one_step_jacobi(A, B, X_ase_unsigned, S_estimated, tau, 1.0);
+[X_jacobi_aligned, ~] = procrustes_align(X_jacobi, X0);
+sse_jacobi = sum((X_jacobi_aligned - X0).^2, 'all');
 
-    Y_j = X_ase_unsigned(idx_j, :) * S_estimated;
-    grad_net = Y_j' * (resid .* dpsi_val);
-    grad_cov = Z_init' * (B(:, i) - Z_init * x_i);
-    grad = (grad_net + grad_cov) / (n + p_cov);
-
-    G_net = Y_j' * (Y_j .* dpsi_val);
-    G_cov = Z_init' * Z_init;
-    G = (G_net + G_cov) / (n + p_cov);
-
-    % OPPOSITE SIGN
-    X_minus(i, :) = (x_i - (G + 1e-9 * eye(d)) \ grad)';
-end
-
-[X_minus_aligned, ~] = procrustes_align(X_minus, X0);
-sse_minus = sum((X_minus_aligned - X0).^2, 'all');
-
-fprintf('Opposite (x - update):\n');
-fprintf('  SSE: %.4f', sse_minus);
-if sse_minus < sse_ase
-    fprintf(' ✓ (%.1f%% improvement)\n', 100*(sse_ase-sse_minus)/sse_ase);
+fprintf('JACOBI (single step):\n');
+fprintf('  SSE: %.4f', sse_jacobi);
+if sse_jacobi < sse_ase
+    fprintf(' ✓ (%.1f%% improvement)\n\n', 100*(sse_ase-sse_jacobi)/sse_ase);
 else
-    fprintf(' ✗ (%.1f%% worse)\n\n', 100*(sse_minus-sse_ase)/sse_ase);
+    fprintf(' ✗ (%.1f%% worse)\n\n', 100*(sse_jacobi-sse_ase)/sse_ase);
 end
 
 fprintf('\n====================================\n');
-fprintf('RECOMMENDATION\n');
+fprintf('COMPARISON\n');
 fprintf('====================================\n');
-if sse_minus < sse_plus && sse_minus < sse_ase
-    fprintf('✓ Use OPPOSITE SIGN: x_new = x - G^{-1} * grad\n');
-    fprintf('  This will improve SSE from %.1f to %.1f\n', sse_ase, sse_minus);
-elseif sse_plus < sse_ase
-    fprintf('✓ Current sign is correct: x_new = x + G^{-1} * grad\n');
-    fprintf('  SSE improves from %.1f to %.1f\n', sse_ase, sse_plus);
+fprintf('ASE SSE:             %.4f (baseline)\n', sse_ase);
+fprintf('BATCH (fminunc):     %.4f', sse_batch);
+if sse_batch < sse_ase
+    fprintf(' ✓ (%.1f%% improvement)\n', 100*(sse_ase-sse_batch)/sse_ase);
 else
-    fprintf('✗ One-step does not improve over ASE!\n');
-    fprintf('  Check gradient/Fisher info calculation\n');
+    fprintf(' (%.1f%% worse)\n', 100*(sse_batch-sse_ase)/sse_ase);
 end
+fprintf('JACOBI (1 step):     %.4f', sse_jacobi);
+if sse_jacobi < sse_ase
+    fprintf(' ✓ (%.1f%% improvement)\n', 100*(sse_ase-sse_jacobi)/sse_ase);
+else
+    fprintf(' (%.1f%% worse)\n', 100*(sse_jacobi-sse_ase)/sse_ase);
+end
+
+fprintf('\nKey differences:\n');
+fprintf('  BATCH uses fminunc: multiple inner iterations, all X updated simultaneously\n');
+fprintf('  JACOBI uses 1 Newton step: updates computed using X_init, applied at once\n');
