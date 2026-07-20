@@ -73,8 +73,15 @@ fprintf('  G condition number:    %.2e\n', cond(G));
 x_plus = x_i + update_direction;
 x_minus = x_i - update_direction;
 
-[~, ~, dist_plus] = procrustes_align([x_plus'; X_ase_unsigned(2:end,:)], X0);
-[~, ~, dist_minus] = procrustes_align([x_minus'; X_ase_unsigned(2:end,:)], X0);
+X_temp_plus = X_ase_unsigned;
+X_temp_plus(i, :) = x_plus';
+[X_temp_plus_aligned, ~] = procrustes_align(X_temp_plus, X0);
+dist_plus = sum((X_temp_plus_aligned - X0).^2, 'all');
+
+X_temp_minus = X_ase_unsigned;
+X_temp_minus(i, :) = x_minus';
+[X_temp_minus_aligned, ~] = procrustes_align(X_temp_minus, X0);
+dist_minus = sum((X_temp_minus_aligned - X0).^2, 'all');
 
 fprintf('\nUpdate direction test:\n');
 fprintf('  x_i + update:  distance = %.6f', dist_plus);
