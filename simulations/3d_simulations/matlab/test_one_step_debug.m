@@ -18,9 +18,9 @@ eps_clip = 1e-10;
 % Set seed
 rng(598 + 1);
 
-% Generate data (NEW design)
+% Generate data (OPTIMIZED design)
 t = (1:n)' / n;
-X0 = [0.3*t + 0.5, 0.15 * sin(2*pi*t) + 0.6, 0.1 * cos(4*pi*t)];
+X0 = [0.42*t + 0.46, 0.27 * sin(2*pi*t) + 0.46, 0.20 * cos(4*pi*t)];
 S = diag([1, 1, -1]);
 Y0 = X0 * S;
 Z0 = randn(p_cov, d);

@@ -40,11 +40,13 @@ rep_start = tic;
 % Set seed for reproducibility
 rng(598 + rep_id);
 
-%% 1. Generate true latent positions (linear + periodic, well-separated eigenvalues)
+%% 1. Generate true latent positions (optimized design with good eigenvalue properties)
+% Design optimized for: λ3=20, λ2-λ3=26.3, condition#=33.3, edge prob in [0,1]
+% Previous: [0.3*t+0.5, 0.15*sin+0.6, 0.1*cos] had λ3=5, cond#=157
 t = (1:n)' / n;
-X0 = [0.3*t + 0.5, ...
-      0.15 * sin(2*pi*t) + 0.6, ...
-      0.1 * cos(4*pi*t)];
+X0 = [0.42*t + 0.46, ...
+      0.27 * sin(2*pi*t) + 0.46, ...
+      0.20 * cos(4*pi*t)];
 
 S = diag([1, 1, -1]);  % Indefinite signature
 Y0 = X0 * S;

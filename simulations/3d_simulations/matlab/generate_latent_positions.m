@@ -4,8 +4,9 @@ function X0 = generate_latent_positions(n, design_type, varargin)
 % Inputs:
 %   n           - Number of vertices
 %   design_type - Type of design:
+%                 'optimized': Optimized design (λ3=20, cond#=33) (RECOMMENDED)
 %                 'current': Original design (0.3t+0.5, 0.15sin, 0.1cos)
-%                 'scaled': Scaled version with larger eigenvalues (RECOMMENDED)
+%                 'scaled': Scaled version with larger eigenvalues
 %                 'orthogonal': Orthogonalized basis with prescribed eigenvalues
 %                 'prescribed': Direct eigenvalue prescription (requires seed)
 %   varargin    - Optional parameters:
@@ -16,7 +17,8 @@ function X0 = generate_latent_positions(n, design_type, varargin)
 %   X0 - n x 3 latent position matrix
 %
 % Example:
-%   X0 = generate_latent_positions(1000, 'scaled');
+%   X0 = generate_latent_positions(1000, 'optimized');  % Recommended
+%   X0 = generate_latent_positions(1000, 'current');
 %   X0 = generate_latent_positions(1000, 'orthogonal', 'eigenvalues', [400, 250, 100]);
 %   X0 = generate_latent_positions(1000, 'prescribed', 'seed', 42);
 
@@ -32,8 +34,17 @@ target_eigs = p.Results.eigenvalues;
 t = (1:n)' / n;
 
 switch lower(design_type)
+    case 'optimized'
+        % Optimized design: λ3=20, λ2-λ3=26.3, condition#=33.3
+        % Edge probabilities in [0.39, 0.95]
+        % Found via optimize_balanced_design.m (Design 9)
+        X0 = [0.42*t + 0.46, ...
+              0.27 * sin(2*pi*t) + 0.46, ...
+              0.20 * cos(4*pi*t)];
+
     case 'current'
         % Original design from prior simulations
+        % λ3=5, condition#=157 (poor numerical properties)
         X0 = [0.3*t + 0.5, ...
               0.15 * sin(2*pi*t) + 0.6, ...
               0.1 * cos(4*pi*t)];
