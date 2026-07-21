@@ -115,9 +115,9 @@ fprintf('  Std across vertices:           %.2f%%\n\n', 100 * std(vertexwise_cove
 
 fprintf('Optimization:\n');
 fprintf('  cgrdpg Convergence: %.1f%%\n', 100 * mean(all_converged, 'omitnan'));
-fprintf('  cgrdpg Mean time:   %.1f sec\n', mean(all_times_cgrdpg, 'omitnan'));
-fprintf('  ASE Mean time:      %.1f sec\n', mean(all_times_ase, 'omitnan'));
-fprintf('  OSE Mean time:      %.1f sec\n\n', mean(all_times_ose, 'omitnan'));
+fprintf('  cgrdpg Mean time:   %.1f (SD: %.1f) sec\n', mean(all_times_cgrdpg, 'omitnan'), std(all_times_cgrdpg, 'omitnan'));
+fprintf('  ASE Mean time:      %.1f (SD: %.1f) sec\n', mean(all_times_ase, 'omitnan'), std(all_times_ase, 'omitnan'));
+fprintf('  OSE Mean time:      %.1f (SD: %.1f) sec\n\n', mean(all_times_ose, 'omitnan'), std(all_times_ose, 'omitnan'));
 
 fprintf('SSE Distribution (cgrdpg):\n');
 fprintf('  Mean:            %.4f\n', mean(all_sse_cgrdpg, 'omitnan'));
