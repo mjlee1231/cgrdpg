@@ -1,17 +1,19 @@
 % Visualize empirical vs theoretical distribution for a single vertex
 % Compare estimated positions across 100 reps with theoretical normal density
 clear; clc;
+addpath('core');
 
-fprintf('Visualizing Vertex Distribution: Empirical vs Theoretical\n');
-fprintf('==========================================================\n\n');
+fprintf('Visualizing cgrdpg Vertex Distribution: Empirical vs Theoretical\n');
+fprintf('================================================================\n\n');
 
 % Parameters
-results_dir = 'results_matlab_3d_batch';  % Batch surrogate results
+results_dir = 'results_matlab_3d_coverage';  % Batch surrogate results
 n_reps = 100;
 vertex_id = randi(1000);  % Random vertex, or set specific: vertex_id = 500;
 d = 3;
 alpha = 0.05;
 chi2_crit = chi2inv(1 - alpha, d);
+tau = 0.001;  % Same as simulation
 
 fprintf('Selected vertex: %d\n', vertex_id);
 fprintf('Loading %d replications...\n', n_reps);
@@ -29,17 +31,25 @@ for rep = 1:n_reps
 
     if exist(filename, 'file')
         data = load(filename);
-        X_estimates(rep, :) = data.X_batch_aligned(vertex_id, :);
+        X_estimates(rep, :) = data.X_cgrdpg(vertex_id, :);
 
         if rep == 1
             X_true = data.X0(vertex_id, :);
-            % Get plugin Fisher info from first rep
-            fisher_info_plugin = data.fisher_batch_plugin{vertex_id};
+            Y_plugin = data.Y_cgrdpg;
+            Z_plugin = data.Z_cgrdpg;
+            n_vertices = data.n;
+            p_cov = data.p_cov;
+            % Compute plugin Fisher info for this vertex
+            fisher_info_plugin = compute_fisher_info_cgrdpg(vertex_id, ...
+                data.X_cgrdpg, Y_plugin, Z_plugin, tau);
         end
 
-        % Check coverage for this vertex
-        err = X_true - data.X_batch_aligned(vertex_id, :);
-        dist = err * fisher_info_plugin * err';
+        % Check coverage for this vertex using plugin Fisher info
+        % Recompute Fisher info for each rep
+        G_plugin_rep = compute_fisher_info_cgrdpg(vertex_id, ...
+            data.X_cgrdpg, data.Y_cgrdpg, data.Z_cgrdpg, tau);
+        err = X_true - data.X_cgrdpg(vertex_id, :);
+        dist = err * G_plugin_rep * err' * (n_vertices + p_cov);
         coverage_plugin(rep) = (dist <= chi2_crit);
 
         n_loaded = n_loaded + 1;
@@ -55,10 +65,8 @@ empirical_coverage = mean(coverage_plugin, 'omitnan');
 
 % Theoretical covariance from plugin Fisher info
 % Cov = G^{-1} / (n + p_cov)
-data = load(fullfile(results_dir, 'rep_001.mat'));
-n = data.n;
-p_cov = data.p_cov;
-Cov_theoretical = inv(fisher_info_plugin) / (n + p_cov);
+% Note: fisher_info_plugin was loaded from rep 1 above
+Cov_theoretical = inv(fisher_info_plugin) / (n_vertices + p_cov);
 
 fprintf('Vertex %d Summary:\n', vertex_id);
 fprintf('  True position:     [%.4f, %.4f, %.4f]\n', X_true);
@@ -178,7 +186,7 @@ for dim = 1:3
     hold off;
 end
 
-sgtitle(sprintf('Vertex %d: Empirical vs Theoretical Distribution (Plugin Coverage: %.1f%%)', ...
+sgtitle(sprintf('cgrdpg Vertex %d: Empirical vs Theoretical Distribution (Plugin Coverage: %.1f%%)', ...
     vertex_id, 100 * empirical_coverage), 'FontSize', 14, 'FontWeight', 'bold');
 
 % Save figure
@@ -205,7 +213,7 @@ for dim = 1:3
     title(sprintf('Q-Q Plot: Dimension %d', dim));
     grid on;
 end
-sgtitle(sprintf('Vertex %d: Q-Q Plots (Testing Normality)', vertex_id), ...
+sgtitle(sprintf('cgrdpg Vertex %d: Q-Q Plots (Testing Normality)', vertex_id), ...
     'FontSize', 14, 'FontWeight', 'bold');
 
 output_file_qq = fullfile(output_dir, sprintf('vertex_%d_qq_plots.png', vertex_id));
