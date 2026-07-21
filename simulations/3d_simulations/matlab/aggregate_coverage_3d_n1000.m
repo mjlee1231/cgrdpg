@@ -1,8 +1,8 @@
-% Aggregate ASE/OSE/cgrdpg coverage results from 100 replications - VERTEX-WISE (3D)
+% Aggregate ASE/OSE/cgrdpg coverage results from 100 replications (n=1000, p_cov=500)
 clear; clc;
 
-fprintf('Aggregating 3D ASE/OSE/cgrdpg Coverage Results (Vertex-wise)\n');
-fprintf('=============================================================\n\n');
+fprintf('Aggregating 3D ASE/OSE/cgrdpg Coverage Results (n=1000, p_cov=500)\n');
+fprintf('===================================================================\n\n');
 
 results_dir = 'results_matlab_3d_coverage';
 n_reps = 100;
@@ -74,7 +74,7 @@ overall_coverage_ose_plugin = mean(vertexwise_coverage_ose_plugin, 'omitnan');
 
 %% Summary statistics
 fprintf('========================================\n');
-fprintf('Vertex-wise Coverage Summary (3D)\n');
+fprintf('Vertex-wise Coverage Summary (3D, n=1000)\n');
 fprintf('========================================\n\n');
 
 fprintf('cgrdpg-TRUE:\n');
