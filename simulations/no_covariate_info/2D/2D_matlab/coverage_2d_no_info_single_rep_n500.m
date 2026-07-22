@@ -77,44 +77,20 @@ ase_time = toc(t0);
 fprintf('ASE: time=%.1fs, S_est=diag([%+d,%+d])\n', ...
     ase_time, diag(S_estimated));
 
-%% 4. Fit cgrdpg using fminunc (for better convergence)
-fprintf('Fitting cgrdpg with fminunc...\n');
+%% 4. Fit cgrdpg using fminunc surrogate (from core)
+fprintf('Fitting cgrdpg with fminunc surrogate...\n');
 t0 = tic;
 
-% Use fminunc with surrogate objective
-options = optimoptions('fminunc', ...
-    'Algorithm', 'trust-region', ...
-    'Display', 'off', ...
-    'MaxIterations', 100, ...
-    'OptimalityTolerance', 1e-6, ...
-    'StepTolerance', 1e-10, ...
-    'SpecifyObjectiveGradient', true, ...
-    'HessianFcn', 'objective');
-
-% Initialize from ASE
-X_init = X_ase_unsigned;
-Y_init = X_init * S_estimated;
-Z_init = B * X_init / (X_init' * X_init);
-
-x0 = [X_init(:); Y_init(:); Z_init(:)];
-
-% Objective function
-obj_fun = @(x) surrogate_objective_2d(x, A, B, n, p_cov, d, tau);
-
-% Optimize
-[x_opt, fval, exitflag, output] = fminunc(obj_fun, x0, options);
+% Use existing core function
+[X_cgrdpg_raw, Z_cgrdpg_raw, fval, exitflag, output, S_fitted] = ...
+    fit_grdpg_fminunc_surrogate(A, B, d, p, tau);
 
 cgrdpg_time = toc(t0);
 
-% Extract solution
-X_cgrdpg = reshape(x_opt(1:n*d), n, d);
-Y_cgrdpg = reshape(x_opt(n*d+1:2*n*d), n, d);
-Z_cgrdpg = reshape(x_opt(2*n*d+1:end), p_cov, d);
-
 % Align to true positions
-[X_cgrdpg, ~] = procrustes_align(X_cgrdpg, X0);
+[X_cgrdpg, ~] = procrustes_align(X_cgrdpg_raw, X0);
 Y_cgrdpg = X_cgrdpg * S_estimated;
-Z_cgrdpg = B * X_cgrdpg / (X_cgrdpg' * X_cgrdpg);
+Z_cgrdpg = (X_cgrdpg \ B')';
 
 fprintf('cgrdpg: exitflag=%d, iters=%d, time=%.1fs, fval=%.4f\n', ...
     exitflag, output.iterations, cgrdpg_time, fval);
