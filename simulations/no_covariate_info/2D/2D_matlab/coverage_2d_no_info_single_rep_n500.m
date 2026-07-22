@@ -9,8 +9,10 @@ if nargin < 1
 end
 
 %% Setup paths
-core_path = fullfile(fileparts(fileparts(fileparts(fileparts(pwd)))), ...
-    '3d_simulations', 'matlab', 'core');
+% Get script directory, then navigate to core functions
+script_dir = fileparts(mfilename('fullpath'));
+% From 2D_matlab, go up 3 levels to simulations/, then to 3d_simulations/matlab/core
+core_path = fullfile(script_dir, '..', '..', '..', '3d_simulations', 'matlab', 'core');
 addpath(core_path);
 
 %% Parameters
