@@ -26,16 +26,20 @@ fprintf('  λ3(G) = %.2f\n\n', eigs_G(3));
 
 % Edge probability matrix
 P = X0 * S * X0';
-eigs_P = sort(eig(P), 'descend');
+eigs_P_all = eig(P);
 
 % Find non-zero eigenvalues (rank is at most 3)
-nonzero_eigs = eigs_P(abs(eigs_P) > 1e-10);
+nonzero_eigs = eigs_P_all(abs(eigs_P_all) > 1e-10);
+
+% Sort by magnitude (descending)
+[~, idx] = sort(abs(nonzero_eigs), 'descend');
+nonzero_eigs = nonzero_eigs(idx);
 
 fprintf('Eigenvalues of edge probability matrix P = X0*S*X0'':\n');
 fprintf('  Number of non-zero eigenvalues: %d\n', length(nonzero_eigs));
-fprintf('  Non-zero eigenvalues:\n');
+fprintf('  Eigenvalues (sorted by magnitude):\n');
 for i = 1:length(nonzero_eigs)
-    fprintf('    λ%d(P) = %+.2f\n', i, nonzero_eigs(i));
+    fprintf('    λ%d(P) = %+.2f  (|λ%d| = %.2f)\n', i, nonzero_eigs(i), i, abs(nonzero_eigs(i)));
 end
 
 fprintf('\n');
