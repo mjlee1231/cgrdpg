@@ -1,4 +1,4 @@
-function [X_ase_unsigned, X_ase_signed, S_estimated] = fit_ase(A, d, p)
+function [X_ase_unsigned, X_ase_signed, S_estimated, lambda_d, V_d] = fit_ase(A, d, p)
 % FIT_ASE Adjacency Spectral Embedding for GRDPG
 %
 % Matches R's ase_grdpg function
@@ -12,6 +12,8 @@ function [X_ase_unsigned, X_ase_signed, S_estimated] = fit_ase(A, d, p)
 %   X_ase_unsigned - (n x d) unsigned ASE: U |Λ|^{1/2}
 %   X_ase_signed   - (n x d) signed ASE: U |Λ|^{1/2} sign(Λ)
 %   S_estimated    - (d x d) signature matrix from actual eigenvalue signs
+%   lambda_d       - (d x 1) top d eigenvalues (sorted by magnitude)
+%   V_d            - (n x d) top d eigenvectors
 
 n = size(A, 1);
 q = d - p;

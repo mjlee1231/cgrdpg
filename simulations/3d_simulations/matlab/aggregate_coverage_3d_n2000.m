@@ -7,6 +7,28 @@ fprintf('====================================================================\n\
 results_dir = 'results_matlab_3d_coverage_n2000';
 n_reps = 100;
 n_vertices = 2000;
+d = 3;
+
+% Compute population eigendecomposition for alignment analysis
+t = (1:n_vertices)' / n_vertices;
+X0 = [0.42*t + 0.46, ...
+      0.27 * sin(2*pi*t) + 0.46, ...
+      0.20 * cos(4*pi*t)];
+S = diag([1, 1, -1]);
+P_pop = X0 * S * X0';
+
+% Population eigendecomposition (sorted by magnitude)
+[V_pop, D_pop] = eig(P_pop);
+eigvals_pop = diag(D_pop);
+[~, idx_pop] = sort(abs(eigvals_pop), 'descend');
+eigvals_pop_sorted = eigvals_pop(idx_pop);
+V_pop_sorted = V_pop(:, idx_pop);
+
+% Population 3rd eigenvector (for alignment analysis)
+v3_pop = V_pop_sorted(:, 3);
+fprintf('Population eigenvalues (sorted by magnitude):\n');
+fprintf('  λ1 = %+.2f, λ2 = %+.2f, λ3 = %+.2f\n\n', ...
+    eigvals_pop_sorted(1), eigvals_pop_sorted(2), eigvals_pop_sorted(3));
 
 % Initialize storage: (n_vertices x n_reps)
 coverage_cgrdpg_true_mat = nan(n_vertices, n_reps);
@@ -23,6 +45,10 @@ all_times_cgrdpg = nan(n_reps, 1);
 all_times_ase = nan(n_reps, 1);
 all_times_ose = nan(n_reps, 1);
 all_converged = nan(n_reps, 1);
+
+% Storage for ASE eigenvalue analysis
+all_ase_eigenvalues = nan(n_reps, 3);  % Top 3 eigenvalues
+all_ase_eigenvector_alignments = nan(n_reps, 1);  % Alignment with population v3
 
 % Load each replication
 n_loaded = 0;
@@ -47,6 +73,15 @@ for rep = 1:n_reps
         all_times_ase(rep) = data.ase_time;
         all_times_ose(rep) = data.ose_time;
         all_converged(rep) = (data.exitflag == 1);
+
+        % ASE eigenvalue analysis
+        if isfield(data, 'ase_eigenvalues') && isfield(data, 'ase_eigenvectors')
+            all_ase_eigenvalues(rep, :) = data.ase_eigenvalues';
+            % Compute alignment with population 3rd eigenvector
+            v3_obs = data.ase_eigenvectors(:, 3);
+            all_ase_eigenvector_alignments(rep) = abs(v3_pop' * v3_obs);
+        end
+
         n_loaded = n_loaded + 1;
     else
         fprintf('Warning: Rep %d not found\n', rep);
@@ -146,6 +181,54 @@ fprintf('  Median:          %.4f\n', median(all_sse_ose, 'omitnan'));
 fprintf('  75th percentile: %.4f\n', quantile(all_sse_ose, 0.75));
 fprintf('  Max:             %.4f\n', max(all_sse_ose));
 
+%% ASE Eigenvalue Analysis
+fprintf('\n========================================\n');
+fprintf('ASE Eigenvalue Analysis (Indefinite GRDPG)\n');
+fprintf('========================================\n\n');
+
+% Count sign patterns of observed rank 3 eigenvalue
+n_eigenvalue_available = sum(~isnan(all_ase_eigenvalues(:, 3)));
+signs_rank3 = sign(all_ase_eigenvalues(:, 3));
+n_positive = sum(signs_rank3 > 0);
+n_negative = sum(signs_rank3 < 0);
+n_zero = sum(signs_rank3 == 0);
+
+fprintf('Observed Rank 3 Eigenvalue Signs (%d reps with data):\n', n_eigenvalue_available);
+fprintf('  Positive: %3d (%.1f%%)\n', n_positive, 100 * n_positive / n_eigenvalue_available);
+fprintf('  Negative: %3d (%.1f%%)\n', n_negative, 100 * n_negative / n_eigenvalue_available);
+fprintf('  Zero:     %3d (%.1f%%)\n\n', n_zero, 100 * n_zero / n_eigenvalue_available);
+
+fprintf('Expected: Negative (matches population λ3 = -20.00)\n\n');
+
+% Eigenvalue magnitude statistics
+fprintf('Observed Eigenvalue Magnitudes (across %d reps):\n', n_eigenvalue_available);
+for k = 1:3
+    vals = abs(all_ase_eigenvalues(:, k));
+    fprintf('  |λ%d|: Mean=%.2f, SD=%.2f, Range=[%.2f, %.2f]\n', ...
+        k, mean(vals, 'omitnan'), std(vals, 'omitnan'), min(vals), max(vals));
+end
+fprintf('\n');
+
+% Eigenvector alignment analysis
+n_alignment_available = sum(~isnan(all_ase_eigenvector_alignments));
+fprintf('Eigenvector Alignment with Population v3 (%d reps with data):\n', n_alignment_available);
+fprintf('  Mean alignment: %.4f\n', mean(all_ase_eigenvector_alignments, 'omitnan'));
+fprintf('  SD:             %.4f\n', std(all_ase_eigenvector_alignments, 'omitnan'));
+fprintf('  Min:            %.4f\n', min(all_ase_eigenvector_alignments));
+fprintf('  Max:            %.4f\n\n', max(all_ase_eigenvector_alignments));
+
+% Identify problematic cases
+idx_positive_rank3 = find(signs_rank3 > 0);
+if ~isempty(idx_positive_rank3)
+    fprintf('⚠️  WARNING: %d replications have POSITIVE rank 3 eigenvalue\n', length(idx_positive_rank3));
+    fprintf('   Reps with positive λ3: %s\n', mat2str(idx_positive_rank3'));
+    fprintf('   Mean alignment for these reps: %.4f\n', ...
+        mean(all_ase_eigenvector_alignments(idx_positive_rank3), 'omitnan'));
+    fprintf('   (Low alignment suggests wrong eigenvector selection)\n\n');
+else
+    fprintf('✓ All replications have NEGATIVE rank 3 eigenvalue (correct sign)\n\n');
+end
+
 %% Save aggregated results
 save(fullfile(results_dir, 'aggregated_vertexwise_results.mat'), ...
     'vertexwise_coverage_cgrdpg_true', 'vertexwise_coverage_cgrdpg_plugin', ...
@@ -159,7 +242,9 @@ save(fullfile(results_dir, 'aggregated_vertexwise_results.mat'), ...
     'overall_coverage_ose_true', 'overall_coverage_ose_plugin', ...
     'all_sse_cgrdpg', 'all_sse_ase', 'all_sse_ose', ...
     'all_times_cgrdpg', 'all_times_ase', 'all_times_ose', ...
-    'all_converged', 'n_loaded', 'n_reps', 'n_vertices');
+    'all_converged', 'n_loaded', 'n_reps', 'n_vertices', ...
+    'all_ase_eigenvalues', 'all_ase_eigenvector_alignments', ...
+    'eigvals_pop_sorted', 'v3_pop');
 
 fprintf('\nVertex-wise results saved to: %s\n', ...
     fullfile(results_dir, 'aggregated_vertexwise_results.mat'));
