@@ -63,7 +63,7 @@ vertexwise_coverage_ase_plugin = mean(coverage_ase_plugin_mat, 2, 'omitnan');
 vertexwise_coverage_ose_true = mean(coverage_ose_true_mat, 2, 'omitnan');
 vertexwise_coverage_ose_plugin = mean(coverage_ose_plugin_mat, 2, 'omitnan');
 
-% Overall coverage
+% Overall coverage (mean and median)
 overall_coverage_cgrdpg_true = mean(vertexwise_coverage_cgrdpg_true, 'omitnan');
 overall_coverage_cgrdpg_plugin = mean(vertexwise_coverage_cgrdpg_plugin, 'omitnan');
 overall_coverage_ase_true = mean(vertexwise_coverage_ase_true, 'omitnan');
@@ -71,46 +71,59 @@ overall_coverage_ase_plugin = mean(vertexwise_coverage_ase_plugin, 'omitnan');
 overall_coverage_ose_true = mean(vertexwise_coverage_ose_true, 'omitnan');
 overall_coverage_ose_plugin = mean(vertexwise_coverage_ose_plugin, 'omitnan');
 
+median_coverage_cgrdpg_true = median(vertexwise_coverage_cgrdpg_true, 'omitnan');
+median_coverage_cgrdpg_plugin = median(vertexwise_coverage_cgrdpg_plugin, 'omitnan');
+median_coverage_ase_true = median(vertexwise_coverage_ase_true, 'omitnan');
+median_coverage_ase_plugin = median(vertexwise_coverage_ase_plugin, 'omitnan');
+median_coverage_ose_true = median(vertexwise_coverage_ose_true, 'omitnan');
+median_coverage_ose_plugin = median(vertexwise_coverage_ose_plugin, 'omitnan');
+
 %% Summary
 fprintf('========================================\n');
 fprintf('Coverage Summary (2D NO COVARIATE INFO)\n');
 fprintf('========================================\n\n');
 
 fprintf('cgrdpg-TRUE:\n');
-fprintf('  Overall: %.2f%%\n', 100 * overall_coverage_cgrdpg_true);
-fprintf('  Range:   [%.2f%%, %.2f%%]\n', ...
+fprintf('  Mean:   %.2f%%,  Median: %.2f%%,  SD: %.2f%%\n', ...
+    100 * overall_coverage_cgrdpg_true, 100 * median_coverage_cgrdpg_true, ...
+    100 * std(vertexwise_coverage_cgrdpg_true, 'omitnan'));
+fprintf('  Range:  [%.2f%%, %.2f%%]\n\n', ...
     100 * min(vertexwise_coverage_cgrdpg_true), 100 * max(vertexwise_coverage_cgrdpg_true));
-fprintf('  Std:     %.2f%%\n\n', 100 * std(vertexwise_coverage_cgrdpg_true, 'omitnan'));
 
 fprintf('cgrdpg-PLUGIN:\n');
-fprintf('  Overall: %.2f%%\n', 100 * overall_coverage_cgrdpg_plugin);
-fprintf('  Range:   [%.2f%%, %.2f%%]\n', ...
+fprintf('  Mean:   %.2f%%,  Median: %.2f%%,  SD: %.2f%%\n', ...
+    100 * overall_coverage_cgrdpg_plugin, 100 * median_coverage_cgrdpg_plugin, ...
+    100 * std(vertexwise_coverage_cgrdpg_plugin, 'omitnan'));
+fprintf('  Range:  [%.2f%%, %.2f%%]\n\n', ...
     100 * min(vertexwise_coverage_cgrdpg_plugin), 100 * max(vertexwise_coverage_cgrdpg_plugin));
-fprintf('  Std:     %.2f%%\n\n', 100 * std(vertexwise_coverage_cgrdpg_plugin, 'omitnan'));
 
 fprintf('ASE-TRUE:\n');
-fprintf('  Overall: %.2f%%\n', 100 * overall_coverage_ase_true);
-fprintf('  Range:   [%.2f%%, %.2f%%]\n', ...
+fprintf('  Mean:   %.2f%%,  Median: %.2f%%,  SD: %.2f%%\n', ...
+    100 * overall_coverage_ase_true, 100 * median_coverage_ase_true, ...
+    100 * std(vertexwise_coverage_ase_true, 'omitnan'));
+fprintf('  Range:  [%.2f%%, %.2f%%]\n\n', ...
     100 * min(vertexwise_coverage_ase_true), 100 * max(vertexwise_coverage_ase_true));
-fprintf('  Std:     %.2f%%\n\n', 100 * std(vertexwise_coverage_ase_true, 'omitnan'));
 
 fprintf('ASE-PLUGIN:\n');
-fprintf('  Overall: %.2f%%\n', 100 * overall_coverage_ase_plugin);
-fprintf('  Range:   [%.2f%%, %.2f%%]\n', ...
+fprintf('  Mean:   %.2f%%,  Median: %.2f%%,  SD: %.2f%%\n', ...
+    100 * overall_coverage_ase_plugin, 100 * median_coverage_ase_plugin, ...
+    100 * std(vertexwise_coverage_ase_plugin, 'omitnan'));
+fprintf('  Range:  [%.2f%%, %.2f%%]\n\n', ...
     100 * min(vertexwise_coverage_ase_plugin), 100 * max(vertexwise_coverage_ase_plugin));
-fprintf('  Std:     %.2f%%\n\n', 100 * std(vertexwise_coverage_ase_plugin, 'omitnan'));
 
 fprintf('OSE-TRUE:\n');
-fprintf('  Overall: %.2f%%\n', 100 * overall_coverage_ose_true);
-fprintf('  Range:   [%.2f%%, %.2f%%]\n', ...
+fprintf('  Mean:   %.2f%%,  Median: %.2f%%,  SD: %.2f%%\n', ...
+    100 * overall_coverage_ose_true, 100 * median_coverage_ose_true, ...
+    100 * std(vertexwise_coverage_ose_true, 'omitnan'));
+fprintf('  Range:  [%.2f%%, %.2f%%]\n\n', ...
     100 * min(vertexwise_coverage_ose_true), 100 * max(vertexwise_coverage_ose_true));
-fprintf('  Std:     %.2f%%\n\n', 100 * std(vertexwise_coverage_ose_true, 'omitnan'));
 
 fprintf('OSE-PLUGIN:\n');
-fprintf('  Overall: %.2f%%\n', 100 * overall_coverage_ose_plugin);
-fprintf('  Range:   [%.2f%%, %.2f%%]\n', ...
+fprintf('  Mean:   %.2f%%,  Median: %.2f%%,  SD: %.2f%%\n', ...
+    100 * overall_coverage_ose_plugin, 100 * median_coverage_ose_plugin, ...
+    100 * std(vertexwise_coverage_ose_plugin, 'omitnan'));
+fprintf('  Range:  [%.2f%%, %.2f%%]\n\n', ...
     100 * min(vertexwise_coverage_ose_plugin), 100 * max(vertexwise_coverage_ose_plugin));
-fprintf('  Std:     %.2f%%\n\n', 100 * std(vertexwise_coverage_ose_plugin, 'omitnan'));
 
 fprintf('Optimization:\n');
 fprintf('  cgrdpg Convergence: %.1f%%\n', 100 * mean(all_converged, 'omitnan'));
