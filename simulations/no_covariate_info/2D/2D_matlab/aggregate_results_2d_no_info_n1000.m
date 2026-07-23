@@ -1,0 +1,170 @@
+% Aggregate results for 2D NO COVARIATE INFO simulation (n=1000, p_cov=500)
+clear; clc;
+
+fprintf('Aggregating 2D NO COVARIATE INFO Results (n=1000, p_cov=500)\n');
+fprintf('============================================================\n\n');
+
+results_dir = 'results_2d_no_info_n1000';
+n_reps = 100;
+n_vertices = 1000;
+
+% Initialize storage
+coverage_cgrdpg_true_mat = nan(n_vertices, n_reps);
+coverage_cgrdpg_plugin_mat = nan(n_vertices, n_reps);
+coverage_ase_true_mat = nan(n_vertices, n_reps);
+coverage_ase_plugin_mat = nan(n_vertices, n_reps);
+coverage_ose_true_mat = nan(n_vertices, n_reps);
+coverage_ose_plugin_mat = nan(n_vertices, n_reps);
+
+all_sse_cgrdpg = nan(n_reps, 1);
+all_sse_ase = nan(n_reps, 1);
+all_sse_ose = nan(n_reps, 1);
+all_times_cgrdpg = nan(n_reps, 1);
+all_times_ase = nan(n_reps, 1);
+all_times_ose = nan(n_reps, 1);
+all_converged = nan(n_reps, 1);
+
+% Load each replication
+n_loaded = 0;
+for rep = 1:n_reps
+    filename = fullfile(results_dir, sprintf('rep_%03d.mat', rep));
+
+    if exist(filename, 'file')
+        data = load(filename);
+
+        % Store vertex-wise coverage
+        coverage_cgrdpg_true_mat(:, rep) = data.results.cgrdpg_true;
+        coverage_cgrdpg_plugin_mat(:, rep) = data.results.cgrdpg_plugin;
+        coverage_ase_true_mat(:, rep) = data.results.ase_true;
+        coverage_ase_plugin_mat(:, rep) = data.results.ase_plugin;
+        coverage_ose_true_mat(:, rep) = data.results.ose_true;
+        coverage_ose_plugin_mat(:, rep) = data.results.ose_plugin;
+
+        all_sse_cgrdpg(rep) = data.sse_cgrdpg;
+        all_sse_ase(rep) = data.sse_ase;
+        all_sse_ose(rep) = data.sse_ose;
+        all_times_cgrdpg(rep) = data.cgrdpg_time;
+        all_times_ase(rep) = data.ase_time;
+        all_times_ose(rep) = data.ose_time;
+        all_converged(rep) = (data.exitflag == 1);
+        n_loaded = n_loaded + 1;
+    else
+        fprintf('Warning: Rep %d not found\n', rep);
+    end
+end
+
+fprintf('Loaded %d/%d replications\n\n', n_loaded, n_reps);
+
+%% Compute vertex-wise coverage rates
+vertexwise_coverage_cgrdpg_true = mean(coverage_cgrdpg_true_mat, 2, 'omitnan');
+vertexwise_coverage_cgrdpg_plugin = mean(coverage_cgrdpg_plugin_mat, 2, 'omitnan');
+vertexwise_coverage_ase_true = mean(coverage_ase_true_mat, 2, 'omitnan');
+vertexwise_coverage_ase_plugin = mean(coverage_ase_plugin_mat, 2, 'omitnan');
+vertexwise_coverage_ose_true = mean(coverage_ose_true_mat, 2, 'omitnan');
+vertexwise_coverage_ose_plugin = mean(coverage_ose_plugin_mat, 2, 'omitnan');
+
+% Overall coverage (mean and median)
+overall_coverage_cgrdpg_true = mean(vertexwise_coverage_cgrdpg_true, 'omitnan');
+overall_coverage_cgrdpg_plugin = mean(vertexwise_coverage_cgrdpg_plugin, 'omitnan');
+overall_coverage_ase_true = mean(vertexwise_coverage_ase_true, 'omitnan');
+overall_coverage_ase_plugin = mean(vertexwise_coverage_ase_plugin, 'omitnan');
+overall_coverage_ose_true = mean(vertexwise_coverage_ose_true, 'omitnan');
+overall_coverage_ose_plugin = mean(vertexwise_coverage_ose_plugin, 'omitnan');
+
+median_coverage_cgrdpg_true = median(vertexwise_coverage_cgrdpg_true, 'omitnan');
+median_coverage_cgrdpg_plugin = median(vertexwise_coverage_cgrdpg_plugin, 'omitnan');
+median_coverage_ase_true = median(vertexwise_coverage_ase_true, 'omitnan');
+median_coverage_ase_plugin = median(vertexwise_coverage_ase_plugin, 'omitnan');
+median_coverage_ose_true = median(vertexwise_coverage_ose_true, 'omitnan');
+median_coverage_ose_plugin = median(vertexwise_coverage_ose_plugin, 'omitnan');
+
+%% Summary
+fprintf('========================================\n');
+fprintf('Coverage Summary (2D NO COVARIATE INFO)\n');
+fprintf('========================================\n\n');
+
+fprintf('cgrdpg-TRUE:\n');
+fprintf('  Mean:   %.2f%%,  Median: %.2f%%,  SD: %.2f%%\n', ...
+    100 * overall_coverage_cgrdpg_true, 100 * median_coverage_cgrdpg_true, ...
+    100 * std(vertexwise_coverage_cgrdpg_true, 'omitnan'));
+fprintf('  Range:  [%.2f%%, %.2f%%]\n\n', ...
+    100 * min(vertexwise_coverage_cgrdpg_true), 100 * max(vertexwise_coverage_cgrdpg_true));
+
+fprintf('cgrdpg-PLUGIN:\n');
+fprintf('  Mean:   %.2f%%,  Median: %.2f%%,  SD: %.2f%%\n', ...
+    100 * overall_coverage_cgrdpg_plugin, 100 * median_coverage_cgrdpg_plugin, ...
+    100 * std(vertexwise_coverage_cgrdpg_plugin, 'omitnan'));
+fprintf('  Range:  [%.2f%%, %.2f%%]\n\n', ...
+    100 * min(vertexwise_coverage_cgrdpg_plugin), 100 * max(vertexwise_coverage_cgrdpg_plugin));
+
+fprintf('ASE-TRUE:\n');
+fprintf('  Mean:   %.2f%%,  Median: %.2f%%,  SD: %.2f%%\n', ...
+    100 * overall_coverage_ase_true, 100 * median_coverage_ase_true, ...
+    100 * std(vertexwise_coverage_ase_true, 'omitnan'));
+fprintf('  Range:  [%.2f%%, %.2f%%]\n\n', ...
+    100 * min(vertexwise_coverage_ase_true), 100 * max(vertexwise_coverage_ase_true));
+
+fprintf('ASE-PLUGIN:\n');
+fprintf('  Mean:   %.2f%%,  Median: %.2f%%,  SD: %.2f%%\n', ...
+    100 * overall_coverage_ase_plugin, 100 * median_coverage_ase_plugin, ...
+    100 * std(vertexwise_coverage_ase_plugin, 'omitnan'));
+fprintf('  Range:  [%.2f%%, %.2f%%]\n\n', ...
+    100 * min(vertexwise_coverage_ase_plugin), 100 * max(vertexwise_coverage_ase_plugin));
+
+fprintf('OSE-TRUE:\n');
+fprintf('  Mean:   %.2f%%,  Median: %.2f%%,  SD: %.2f%%\n', ...
+    100 * overall_coverage_ose_true, 100 * median_coverage_ose_true, ...
+    100 * std(vertexwise_coverage_ose_true, 'omitnan'));
+fprintf('  Range:  [%.2f%%, %.2f%%]\n\n', ...
+    100 * min(vertexwise_coverage_ose_true), 100 * max(vertexwise_coverage_ose_true));
+
+fprintf('OSE-PLUGIN:\n');
+fprintf('  Mean:   %.2f%%,  Median: %.2f%%,  SD: %.2f%%\n', ...
+    100 * overall_coverage_ose_plugin, 100 * median_coverage_ose_plugin, ...
+    100 * std(vertexwise_coverage_ose_plugin, 'omitnan'));
+fprintf('  Range:  [%.2f%%, %.2f%%]\n\n', ...
+    100 * min(vertexwise_coverage_ose_plugin), 100 * max(vertexwise_coverage_ose_plugin));
+
+fprintf('Optimization:\n');
+fprintf('  cgrdpg Convergence: %.1f%%\n', 100 * mean(all_converged, 'omitnan'));
+fprintf('  cgrdpg Mean time:   %.1f (SD: %.1f) sec\n', ...
+    mean(all_times_cgrdpg, 'omitnan'), std(all_times_cgrdpg, 'omitnan'));
+fprintf('  ASE Mean time:      %.1f (SD: %.1f) sec\n', ...
+    mean(all_times_ase, 'omitnan'), std(all_times_ase, 'omitnan'));
+fprintf('  OSE Mean time:      %.1f (SD: %.1f) sec\n\n', ...
+    mean(all_times_ose, 'omitnan'), std(all_times_ose, 'omitnan'));
+
+fprintf('SSE Distribution (cgrdpg):\n');
+fprintf('  Mean:   %.4f\n', mean(all_sse_cgrdpg, 'omitnan'));
+fprintf('  Std:    %.4f\n', std(all_sse_cgrdpg, 'omitnan'));
+fprintf('  Median: %.4f\n', median(all_sse_cgrdpg, 'omitnan'));
+fprintf('  Range:  [%.4f, %.4f]\n\n', min(all_sse_cgrdpg), max(all_sse_cgrdpg));
+
+fprintf('SSE Distribution (ASE):\n');
+fprintf('  Mean:   %.4f\n', mean(all_sse_ase, 'omitnan'));
+fprintf('  Std:    %.4f\n', std(all_sse_ase, 'omitnan'));
+fprintf('  Median: %.4f\n', median(all_sse_ase, 'omitnan'));
+fprintf('  Range:  [%.4f, %.4f]\n\n', min(all_sse_ase), max(all_sse_ase));
+
+fprintf('SSE Distribution (OSE):\n');
+fprintf('  Mean:   %.4f\n', mean(all_sse_ose, 'omitnan'));
+fprintf('  Std:    %.4f\n', std(all_sse_ose, 'omitnan'));
+fprintf('  Median: %.4f\n', median(all_sse_ose, 'omitnan'));
+fprintf('  Range:  [%.4f, %.4f]\n\n', min(all_sse_ose), max(all_sse_ose));
+
+%% Save aggregated results
+save(fullfile(results_dir, 'aggregated_results.mat'), ...
+    'vertexwise_coverage_cgrdpg_true', 'vertexwise_coverage_cgrdpg_plugin', ...
+    'vertexwise_coverage_ase_true', 'vertexwise_coverage_ase_plugin', ...
+    'vertexwise_coverage_ose_true', 'vertexwise_coverage_ose_plugin', ...
+    'coverage_cgrdpg_true_mat', 'coverage_cgrdpg_plugin_mat', ...
+    'coverage_ase_true_mat', 'coverage_ase_plugin_mat', ...
+    'coverage_ose_true_mat', 'coverage_ose_plugin_mat', ...
+    'overall_coverage_cgrdpg_true', 'overall_coverage_cgrdpg_plugin', ...
+    'overall_coverage_ase_true', 'overall_coverage_ase_plugin', ...
+    'overall_coverage_ose_true', 'overall_coverage_ose_plugin', ...
+    'all_sse_cgrdpg', 'all_sse_ase', 'all_sse_ose', ...
+    'all_times_cgrdpg', 'all_times_ase', 'all_times_ose', ...
+    'all_converged', 'n_loaded', 'n_reps', 'n_vertices');
+
+fprintf('\nResults saved to: %s\n', fullfile(results_dir, 'aggregated_results.mat'));
