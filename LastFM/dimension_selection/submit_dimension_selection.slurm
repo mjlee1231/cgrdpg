@@ -8,24 +8,25 @@
 #SBATCH --mem=128G
 #SBATCH --time=04:00:00
 #SBATCH --array=1-5
-#SBATCH --output=logs_tau0.001/dimension_d%a_%j.out
-#SBATCH --error=errors_tau0.001/dimension_d%a_%j.err
+#SBATCH --output=logs_maxit30_tol0.1/dimension_d%a_%j.out
+#SBATCH --error=errors_maxit30_tol0.1/dimension_d%a_%j.err
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=mle6@iu.edu
 
 # ============================================================================
-# Dimension Selection for LastFM Data - PARALLEL EXECUTION (tau=0.001)
+# Dimension Selection for LastFM Data - PARALLEL EXECUTION
 # ============================================================================
 # Runs fit_grdpg_cov_parallel for d = 1, 2, 3, 4, 5 in parallel
 # Each array job handles one dimension with 32 cores
+# Settings: maxit=30, tol=0.1
 # ============================================================================
 
 module load r/4.3.1
 
-# Create directories for outputs (tau=0.001)
-mkdir -p logs_tau0.001
-mkdir -p errors_tau0.001
-mkdir -p results_tau0.001
+# Create directories for outputs (maxit=30, tol=0.1)
+mkdir -p logs_maxit30_tol0.1
+mkdir -p errors_maxit30_tol0.1
+mkdir -p results_maxit30_tol0.1
 
 echo "========================================"
 echo "Job started at: $(date)"
