@@ -75,8 +75,8 @@ cat("===========================================================================
 
 # Dimensions to test
 d_values <- 1:5
-maxit <- 10
-tol <- 0.01
+maxit <- 100  # Increased from 10 to allow more iterations
+tol <- 0.05   # Relaxed from 0.01 for better convergence
 
 # Storage for results
 results <- data.frame(
@@ -103,9 +103,12 @@ for (d in d_values) {
 
   elapsed <- as.numeric(difftime(Sys.time(), start_time, units = "secs"))
 
-  # Extract final objective (negative log pseudo-likelihood)
+  # Extract final objective
+  # IMPORTANT: fit$history$objective is log pseudo-likelihood
+  # We need to NEGATE it to get negative log-likelihood
   if (length(fit$history$objective) > 0) {
-    neg_log_lik <- tail(fit$history$objective, 1)
+    log_lik <- tail(fit$history$objective, 1)
+    neg_log_lik <- -log_lik  # Negate to get negative log-likelihood
   } else {
     neg_log_lik <- NA
   }
@@ -125,12 +128,22 @@ for (d in d_values) {
   AIC <- 2 * neg_log_lik + 2 * n_params
 
   cat(sprintf("  Converged: %s\n", ifelse(fit$converged, "YES", "NO")))
-  cat(sprintf("  Iterations: %d\n", fit$iters))
+  cat(sprintf("  Iterations: %d / %d\n", fit$iters, maxit))
   cat(sprintf("  Time: %.1f sec\n", elapsed))
+  cat(sprintf("  Log-lik: %.2f\n", log_lik))
   cat(sprintf("  Neg-log-lik: %.2f\n", neg_log_lik))
   cat(sprintf("  Num params: %d\n", n_params))
   cat(sprintf("  BIC: %.2f\n", BIC))
-  cat(sprintf("  AIC: %.2f\n\n", AIC))
+  cat(sprintf("  AIC: %.2f\n", AIC))
+
+  # Show convergence trajectory (last 5 objective values)
+  if (length(fit$history$objective) > 1) {
+    n_show <- min(5, length(fit$history$objective))
+    recent_obj <- tail(fit$history$objective, n_show)
+    cat(sprintf("  Last %d objective values: %s\n",
+                n_show, paste(sprintf("%.2f", recent_obj), collapse=" -> ")))
+  }
+  cat("\n")
 
   # Store results
   results <- rbind(results, data.frame(
