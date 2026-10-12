@@ -4,9 +4,9 @@
 #SBATCH --partition=general
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=1
+#SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
-#SBATCH --time=08:00:00
+#SBATCH --time=20:00:00
 #SBATCH --array=1-5
 #SBATCH --output=logs_matlab/dimension_d%a_%j.out
 #SBATCH --error=errors_matlab/dimension_d%a_%j.err
@@ -26,7 +26,7 @@ module load matlab
 # Create directories for outputs
 mkdir -p logs_matlab
 mkdir -p errors_matlab
-mkdir -p results_matlab_maxit30_tol0.1
+mkdir -p results_matlab_maxit50_tol0.1
 
 echo "========================================"
 echo "Job started at: $(date)"
@@ -34,7 +34,7 @@ echo "Node: $(hostname)"
 echo "Job ID: $SLURM_JOB_ID"
 echo "Array Task ID: $SLURM_ARRAY_TASK_ID"
 echo "Dimension: d = $SLURM_ARRAY_TASK_ID"
-echo "Resources: 1 CPU, 64GB RAM, 8 hours"
+echo "Resources: 8 CPUs, 64GB RAM, 20 hours"
 echo "========================================"
 
 cd $SLURM_SUBMIT_DIR

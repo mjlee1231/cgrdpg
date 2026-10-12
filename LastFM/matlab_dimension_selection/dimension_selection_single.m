@@ -145,7 +145,9 @@ fprintf('STEP 3: Computing information criteria\n');
 fprintf('============================================================================\n\n');
 
 % Negative log-likelihood
-neg_log_lik = -fval;
+% fval from fminunc is already -log_lik (since we minimized -log_lik)
+% So neg_log_lik = fval (no additional negation needed)
+neg_log_lik = fval;
 
 % Number of parameters: n*d + p*d - d^2
 n_params = n * d + p_cov * d - d * d;
@@ -180,7 +182,7 @@ result.signature = S_estimated;
 result.timestamp = datetime;
 
 % Create output directory if needed (with settings info)
-results_dir = 'results_matlab_maxit30_tol0.1';
+results_dir = 'results_matlab_maxit50_tol0.1';
 if ~exist(results_dir, 'dir')
     mkdir(results_dir);
 end

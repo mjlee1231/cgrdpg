@@ -57,8 +57,8 @@ fprintf('%+d ', diag(S_estimated)');
 fprintf('])\n');
 
 % Outer loop parameters
-max_outer_iter = 30;
-tol_outer = 0.1;  % Convergence tolerance on max row change (relaxed for faster convergence)
+max_outer_iter = 50;
+tol_outer = 0.1;  % Convergence tolerance on max row change
 
 % Outer loop: Surrogate optimization
 fprintf('\nStarting surrogate optimization with outer iterations...\n');
