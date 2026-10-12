@@ -20,7 +20,7 @@ addpath('core');  % Add core functions to path
 fprintf('STEP 1: Loading and preprocessing data...\n');
 
 % Load data
-load('../CovariatesMatrix.Rdata', '-mat');  % Assumes .mat format
+load('../CovariatesMatrix.mat');  % Load MATLAB format (created by prepare_data_for_matlab.R)
 A_edges = readmatrix('../lastfm_asia_edges.csv');
 labels = readmatrix('../lastfm_asia_target.csv');
 
