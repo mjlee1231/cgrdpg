@@ -15,19 +15,25 @@ for (d in 1:5) {
   file_path <- sprintf("%s/results_d%d.mat", results_dir, d)
 
   if (file.exists(file_path)) {
-    mat_data <- readMat(file_path)
-    result <- mat_data$result
+    tryCatch({
+      mat_data <- readMat(file_path)
+      result <- mat_data$result
 
-    all_results[[d]] <- list(
-      d = as.integer(result$d),
-      neg_log_lik = as.numeric(result$neg.log.lik),
-      n_params = as.integer(result$n.params),
-      BIC = as.numeric(result$BIC),
-      AIC = as.numeric(result$AIC),
-      converged = as.logical(result$converged),
-      iters = as.integer(result$iters),
-      time_sec = as.numeric(result$time.sec)
-    )
+      # Handle nested structure - extract values safely
+      all_results[[d]] <- list(
+        d = as.integer(result[[1]]),  # First element is d
+        neg_log_lik = as.numeric(result[[2]]),  # neg.log.lik
+        n_params = as.integer(result[[3]]),  # n.params
+        BIC = as.numeric(result[[4]]),  # BIC
+        AIC = as.numeric(result[[5]]),  # AIC
+        converged = as.logical(result[[6]]),  # converged
+        iters = as.integer(result[[7]]),  # iters
+        time_sec = as.numeric(result[[8]])  # time.sec
+      )
+    }, error = function(e) {
+      cat(sprintf("Warning: Could not read %s: %s\n", file_path, e$message))
+      all_results[[d]] <<- NULL
+    })
   }
 }
 
@@ -48,38 +54,51 @@ for (d in 1:5) {
 
 cat("\n")
 
-# Find optimal dimension
-BICs <- sapply(all_results, function(r) r$BIC)
-AICs <- sapply(all_results, function(r) r$AIC)
-optimal_d_BIC <- which.min(BICs)
-optimal_d_AIC <- which.min(AICs)
+# Find optimal dimension (filter out NULLs)
+valid_results <- all_results[!sapply(all_results, is.null)]
+if (length(valid_results) > 0) {
+  BICs <- sapply(valid_results, function(r) r$BIC)
+  AICs <- sapply(valid_results, function(r) r$AIC)
+  dims <- sapply(valid_results, function(r) r$d)
 
-cat("============================================================================\n")
-cat("Model Selection:\n")
-cat("============================================================================\n")
-cat(sprintf("  Optimal dimension (BIC): d = %d (BIC = %.2f)\n", optimal_d_BIC, BICs[optimal_d_BIC]))
-cat(sprintf("  Optimal dimension (AIC): d = %d (AIC = %.2f)\n", optimal_d_AIC, AICs[optimal_d_AIC]))
-cat("\n")
+  optimal_idx_BIC <- which.min(BICs)
+  optimal_idx_AIC <- which.min(AICs)
 
-# Convergence summary
-converged_dims <- sapply(all_results, function(r) r$converged)
-cat("Convergence Summary:\n")
-cat(sprintf("  Converged: %s\n", paste(which(converged_dims), collapse=", ")))
-if (any(!converged_dims)) {
-  cat(sprintf("  NOT converged: %s\n", paste(which(!converged_dims), collapse=", ")))
+  cat("============================================================================\n")
+  cat("Model Selection:\n")
+  cat("============================================================================\n")
+  cat(sprintf("  Optimal dimension (BIC): d = %d (BIC = %.2f)\n",
+              dims[optimal_idx_BIC], BICs[optimal_idx_BIC]))
+  cat(sprintf("  Optimal dimension (AIC): d = %d (AIC = %.2f)\n",
+              dims[optimal_idx_AIC], AICs[optimal_idx_AIC]))
+  cat("\n")
+
+  # Convergence summary
+  converged_dims <- sapply(valid_results, function(r) as.logical(r$converged))
+  converged_d <- dims[converged_dims]
+  not_converged_d <- dims[!converged_dims]
+
+  cat("Convergence Summary:\n")
+  if (length(converged_d) > 0) {
+    cat(sprintf("  Converged: d = %s\n", paste(converged_d, collapse=", ")))
+  }
+  if (length(not_converged_d) > 0) {
+    cat(sprintf("  NOT converged: d = %s\n", paste(not_converged_d, collapse=", ")))
+  }
+  cat("\n")
+} else {
+  cat("\nNo valid results found!\n\n")
 }
-cat("\n")
 
 # Timing summary
-total_time <- sum(sapply(all_results, function(r) r$time_sec)) / 3600
-cat("Timing Summary:\n")
-for (d in 1:5) {
-  if (!is.null(all_results[[d]])) {
-    r <- all_results[[d]]
+if (length(valid_results) > 0) {
+  total_time <- sum(sapply(valid_results, function(r) r$time_sec)) / 3600
+  cat("Timing Summary:\n")
+  for (r in valid_results) {
     cat(sprintf("  d=%d: %.2f hours (%d iterations)\n", r$d, r$time_sec/3600, r$iters))
   }
+  cat(sprintf("  Total: %.2f hours\n", total_time))
+  cat("\n")
 }
-cat(sprintf("  Total: %.2f hours\n", total_time))
-cat("\n")
 
 cat("============================================================================\n")
