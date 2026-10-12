@@ -21,7 +21,7 @@
 # Settings: maxit=30, tol=0.1
 # ============================================================================
 
-module load r/4.3.1
+module load r  # Will use default R version available on HPC
 
 # Create directories for outputs (maxit=30, tol=0.1)
 mkdir -p logs_maxit30_tol0.1
