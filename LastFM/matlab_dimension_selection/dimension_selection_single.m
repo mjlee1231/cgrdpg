@@ -22,7 +22,14 @@ fprintf('STEP 1: Loading and preprocessing data...\n');
 % Load data
 load('../CovariatesMatrix.mat');  % Load MATLAB format (created by prepare_data_for_matlab.R)
 A_edges = readmatrix('../lastfm_asia_edges.csv');
-labels = readmatrix('../lastfm_asia_target.csv');
+labels_data = readmatrix('../lastfm_asia_target.csv');
+
+% Extract target column (last column if CSV has multiple columns)
+if size(labels_data, 2) > 1
+    labels = labels_data(:, end);  % Take last column (target)
+else
+    labels = labels_data;
+end
 
 % Convert edgelist to adjacency matrix
 n_nodes = max(A_edges(:)) + 1;  % +1 because edges are 0-indexed in CSV
@@ -32,9 +39,17 @@ for i = 1:size(A_edges, 1)
 end
 A = A + A';  % Symmetrize
 
+% Debug: Check dimensions
+fprintf('  Loaded data: A is %dx%d, labels is %dx%d, sparseX is %dx%d\n', ...
+    size(A, 1), size(A, 2), size(labels, 1), size(labels, 2), ...
+    size(sparseX, 1), size(sparseX, 2));
+
 % Preprocessing (match R version)
 label = labels + 1;  % Convert to 1-indexed
 ind5 = label ~= 5;
+
+% Debug: Check filtering
+fprintf('  Filtering: keeping %d/%d nodes (excluding label 5)\n', sum(ind5), length(ind5));
 A = A(ind5, ind5);
 X = sparseX(ind5, :);
 label = label(ind5);
