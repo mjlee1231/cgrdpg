@@ -19,16 +19,16 @@ for (d in 1:5) {
       mat_data <- readMat(file_path)
       result <- mat_data$result
 
-      # Handle nested structure - extract values safely
+      # Extract values from 1x1 matrices using [1,1] indexing
       all_results[[d]] <- list(
-        d = as.integer(result[[1]]),  # First element is d
-        neg_log_lik = as.numeric(result[[2]]),  # neg.log.lik
-        n_params = as.integer(result[[3]]),  # n.params
-        BIC = as.numeric(result[[4]]),  # BIC
-        AIC = as.numeric(result[[5]]),  # AIC
-        converged = as.logical(result[[6]]),  # converged
-        iters = as.integer(result[[7]]),  # iters
-        time_sec = as.numeric(result[[8]])  # time.sec
+        d = as.integer(result[[1]][1,1]),
+        neg_log_lik = as.numeric(result[[2]][1,1]),
+        n_params = as.integer(result[[3]][1,1]),
+        BIC = as.numeric(result[[4]][1,1]),
+        AIC = as.numeric(result[[5]][1,1]),
+        converged = as.logical(result[[6]][1,1]),
+        iters = as.integer(result[[7]][1,1]),
+        time_sec = as.numeric(result[[8]][1,1])
       )
     }, error = function(e) {
       cat(sprintf("Warning: Could not read %s: %s\n", file_path, e$message))
