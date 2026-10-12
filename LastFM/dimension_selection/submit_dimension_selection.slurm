@@ -6,8 +6,8 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=128G
-#SBATCH --time=04:00:00
-#SBATCH --array=1-5
+#SBATCH --time=12:00:00
+#SBATCH --array=2-5
 #SBATCH --output=logs_maxit30_tol0.1/dimension_d%a_%j.out
 #SBATCH --error=errors_maxit30_tol0.1/dimension_d%a_%j.err
 #SBATCH --mail-type=END,FAIL
@@ -21,7 +21,7 @@
 # Settings: maxit=30, tol=0.1
 # ============================================================================
 
-module load r  # Will use default R version available on HPC
+module load r/4.4.1
 
 # Create directories for outputs (maxit=30, tol=0.1)
 mkdir -p logs_maxit30_tol0.1
@@ -34,7 +34,7 @@ echo "Node: $(hostname)"
 echo "Job ID: $SLURM_JOB_ID"
 echo "Array Task ID: $SLURM_ARRAY_TASK_ID"
 echo "Dimension: d = $SLURM_ARRAY_TASK_ID"
-echo "Resources: 32 CPUs, 128GB RAM, 4 hours"
+echo "Resources: 32 CPUs, 128GB RAM, 12 hours"
 echo "========================================"
 
 cd $SLURM_SUBMIT_DIR
