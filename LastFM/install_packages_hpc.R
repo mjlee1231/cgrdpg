@@ -14,7 +14,9 @@ required_packages <- c(
   "Matrix",
   "irlba",
   "ggplot2",
-  "cluster"
+  "cluster",
+  "foreach",
+  "doParallel"
 )
 
 cat("Required packages:\n")
