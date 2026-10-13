@@ -17,7 +17,7 @@
 # ============================================================================
 # Parameters: maxit=20, tol=0.05, tau=0.001
 # Using 48 cores for parallel Fisher scoring
-# Compares: Modified Fisher-scoring vs ASE vs OSE
+# Compares: MSLE (Maximum Surrogate Likelihood Estimate) vs ASE vs OSE
 # ============================================================================
 
 module load r/4.4.1
