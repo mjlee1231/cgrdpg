@@ -33,6 +33,9 @@ echo "========================================"
 
 cd $SLURM_SUBMIT_DIR
 
+# Create results directory if it doesn't exist
+mkdir -p results
+
 START_TIME=$(date +%s)
 
 # Run R script with d=3
