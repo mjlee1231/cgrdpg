@@ -48,14 +48,23 @@ cat("===========================================================================
 # Load data for labels
 cat("Loading data for labels...\n")
 load("CovariatesMatrix.Rdata")
-X <- as.matrix(sparseX)
+X_orig <- as.matrix(sparseX)
 edgelist <- read.csv("lastfm_asia_edges.csv") + 1
-label <- read.csv('lastfm_asia_target.csv')$target + 1
+label_orig <- read.csv('lastfm_asia_target.csv')$target + 1
+
+# Build adjacency matrix FIRST (before filtering)
+n_orig <- nrow(X_orig)
+A <- matrix(0, n_orig, n_orig)
+for (i in 1:nrow(edgelist)) {
+  A[edgelist[i,1], edgelist[i,2]] <- 1
+}
+A <- A + t(A)
 
 # Same preprocessing as in dimension_selection_single.m
-ind5 <- which(label != 5)
-X <- X[ind5,]
-label <- label[ind5]
+ind5 <- which(label_orig != 5)
+A <- A[ind5, ind5]
+X <- X_orig[ind5,]
+label <- label_orig[ind5]
 X <- X[, colSums(X) > 0]
 
 labelnew <- label
@@ -64,6 +73,7 @@ label[labelnew > 5] <- label[labelnew > 5] - 1
 sizes <- summary(as.factor(label))
 class_select <- names(sizes)[sizes > 300 & sizes < 1000]
 ind.select <- which(label %in% class_select)
+Aselect <- A[ind.select, ind.select]
 Xselect <- X[ind.select,]
 labelselect <- label[ind.select]
 
@@ -77,16 +87,10 @@ Xselect <- Xselect[, prop > quantile(prop, probs=prob, na.rm=TRUE)]
 dnode <- rowSums(Xselect)
 like <- which(dnode > 0)
 Xselect <- Xselect[like,]
+Aselect <- Aselect[like, like]
 labelselect <- labelselect[like]
 
 # Remove low-degree nodes (matching MATLAB)
-A <- matrix(0, nrow(X), nrow(X))
-for (i in 1:nrow(edgelist)) A[edgelist[i,1], edgelist[i,2]] <- 1
-A <- A + t(A)
-A <- A[ind5, ind5]
-Aselect <- A[ind.select, ind.select]
-Aselect <- Aselect[like, like]
-
 dselect <- rowSums(Aselect)
 while(sum(dselect <= 1) > 0) {
   keep <- which(dselect > 1)
