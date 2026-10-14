@@ -6,7 +6,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=48
 #SBATCH --mem=192G
-#SBATCH --time=10:00:00
+#SBATCH --time=20:00:00
 #SBATCH --output=logs/lastfm_d3_%j.out
 #SBATCH --error=errors/lastfm_d3_%j.err
 #SBATCH --mail-type=END,FAIL
@@ -27,7 +27,7 @@ echo "Job started at: $(date)"
 echo "Node: $(hostname)"
 echo "Job ID: $SLURM_JOB_ID"
 echo "Dimension: d = 3"
-echo "Resources: 48 CPUs, 192GB RAM, 10 hours"
+echo "Resources: 48 CPUs, 192GB RAM, 20 hours"
 echo "Parameters: maxit=20, tol=0.05, tau=0.001"
 echo "========================================"
 
